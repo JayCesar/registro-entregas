@@ -4,7 +4,8 @@
 // O nome vem de config.ts (NOME_RESPONSAVEL). A foto é enviada na aba de edição,
 // recortada em quadrado, reduzida e guardada no localStorage como data URL:
 // como os registros, ela vale só para este navegador. Sem foto, o cabeçalho
-// mostra as iniciais do nome.
+// mostra as iniciais do nome. Na página publicada a foto vai embutida
+// (#foto-publicada, ver gerarPaginaPublicada em app.ts).
 const CHAVE_FOTO = "registro-entregas:foto";
 // Lado da foto salva, em pixels. O cabeçalho exibe menor; a folga cobre telas de alta densidade.
 const LADO_FOTO = 256;
@@ -23,8 +24,18 @@ function iniciais(nome) {
     const ultima = partes.length > 1 ? (partes.at(-1)?.[0] ?? "") : "";
     return (primeira + ultima).toUpperCase();
 }
+// Na página publicada a foto vem só do próprio arquivo (JSON com o data URL);
+// sem ela, ficam as iniciais, e nunca a foto do navegador de quem abre.
+const ehPaginaPublicada = document.getElementById("dados-publicados") !== null;
+const fotoPublicada = document.getElementById("foto-publicada")?.textContent;
 function lerFoto() {
     try {
+        if (ehPaginaPublicada) {
+            if (!fotoPublicada)
+                return null;
+            const foto = JSON.parse(fotoPublicada);
+            return typeof foto === "string" && foto.startsWith("data:image/") ? foto : null;
+        }
         return localStorage.getItem(CHAVE_FOTO);
     }
     catch {

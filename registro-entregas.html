@@ -5607,10 +5607,15 @@ async function gerarPaginaPublicada() {
     // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
     const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
     const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}<\/script>\n`;
+    // Foto do cabeçalho (perfil.ts): quem abre o link não tem o localStorage de quem publica.
+    const foto = lerFoto();
+    const tagFoto = foto
+        ? `<script type="application/json" id="foto-publicada">${JSON.stringify(foto).replaceAll("<", "\\u003c")}<\/script>\n`
+        : "";
     const scripts = [...document.querySelectorAll("script[data-app]")]
         .map((script) => `<script data-app>${script.textContent ?? ""}<\/script>`)
         .join("\n");
-    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}<\/script>\n${tagOkrs}${tagPdi}${scripts}\n</body>`);
+    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}<\/script>\n${tagOkrs}${tagFoto}${tagPdi}${scripts}\n</body>`);
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([pagina], { type: "text/html" }));
     link.download = `registro-entregas-publicado-${new Date().toISOString().slice(0, 10)}.html`;
@@ -6558,7 +6563,8 @@ if (tagPublicada) {
 // O nome vem de config.ts (NOME_RESPONSAVEL). A foto é enviada na aba de edição,
 // recortada em quadrado, reduzida e guardada no localStorage como data URL:
 // como os registros, ela vale só para este navegador. Sem foto, o cabeçalho
-// mostra as iniciais do nome.
+// mostra as iniciais do nome. Na página publicada a foto vai embutida
+// (#foto-publicada, ver gerarPaginaPublicada em app.ts).
 const CHAVE_FOTO = "registro-entregas:foto";
 // Lado da foto salva, em pixels. O cabeçalho exibe menor; a folga cobre telas de alta densidade.
 const LADO_FOTO = 256;
@@ -6577,8 +6583,18 @@ function iniciais(nome) {
     const ultima = partes.length > 1 ? (partes.at(-1)?.[0] ?? "") : "";
     return (primeira + ultima).toUpperCase();
 }
+// Na página publicada a foto vem só do próprio arquivo (JSON com o data URL);
+// sem ela, ficam as iniciais, e nunca a foto do navegador de quem abre.
+const ehPaginaPublicada = document.getElementById("dados-publicados") !== null;
+const fotoPublicada = document.getElementById("foto-publicada")?.textContent;
 function lerFoto() {
     try {
+        if (ehPaginaPublicada) {
+            if (!fotoPublicada)
+                return null;
+            const foto = JSON.parse(fotoPublicada);
+            return typeof foto === "string" && foto.startsWith("data:image/") ? foto : null;
+        }
         return localStorage.getItem(CHAVE_FOTO);
     }
     catch {

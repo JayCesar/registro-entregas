@@ -893,10 +893,15 @@ async function gerarPaginaPublicada() {
     // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
     const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
     const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}</script>\n`;
+    // Foto do cabeçalho (perfil.ts): quem abre o link não tem o localStorage de quem publica.
+    const foto = lerFoto();
+    const tagFoto = foto
+        ? `<script type="application/json" id="foto-publicada">${JSON.stringify(foto).replaceAll("<", "\\u003c")}</script>\n`
+        : "";
     const scripts = [...document.querySelectorAll("script[data-app]")]
         .map((script) => `<script data-app>${script.textContent ?? ""}</script>`)
         .join("\n");
-    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}</script>\n${tagOkrs}${tagPdi}${scripts}\n</body>`);
+    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}</script>\n${tagOkrs}${tagFoto}${tagPdi}${scripts}\n</body>`);
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([pagina], { type: "text/html" }));
     link.download = `registro-entregas-publicado-${new Date().toISOString().slice(0, 10)}.html`;
