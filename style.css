@@ -3395,6 +3395,20 @@ button.modal-fechar {
   border-color: color-mix(in srgb, var(--tipo-discovery) 45%, transparent);
 }
 
+/* Nome e evidências da GMUD: linha inteira, dois campos lado a lado. */
+.gmud-extra {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .gmud-extra {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---------- Busca da tabela de registros ---------- */
 
 /* Mesma barra da busca do dashboard, numa linha só, logo abaixo do título. */

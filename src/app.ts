@@ -8,6 +8,7 @@ interface Gmud {
   nome: string; // número/identificador (ex.: GMUD-12345)
   titulo?: string | null; // nome descritivo; ausente em registros anteriores a este campo
   link: string | null;
+  evidencias?: string | null; // link da pasta/documento com as evidências; idem
 }
 
 interface AlteracaoGit {
@@ -293,8 +294,9 @@ function gerarId(): string {
 
 // ---------- Validação ----------
 
-// `exigirCamada` = false no CSV: planilhas de antes da coluna "camadas" continuam válidas.
-function validar(dados: FormData, exigirCamada = true): Validacao {
+// `regrasDoFormulario` = false no CSV: planilhas de antes das colunas "camadas" e
+// "gmudEvidencias" continuam válidas (no formulário os dois são obrigatórios).
+function validar(dados: FormData, regrasDoFormulario = true): Validacao {
   const erros: Erros = {};
 
   const tipo = texto(dados, "tipo");
@@ -384,7 +386,12 @@ function validar(dados: FormData, exigirCamada = true): Validacao {
     if (link && !urlValida(link)) erros.gmudLink = "Link inválido (use http:// ou https://).";
     const titulo = texto(dados, "gmudTitulo");
     if (titulo && !nome) erros.gmudNome = "Informe o número da GMUD para usar o nome.";
-    if (nome) gmud = { nome, titulo: titulo || null, link: link || null };
+    // Teve GMUD, tem que ter evidências.
+    const evidencias = texto(dados, "gmudEvidencias");
+    if (evidencias && !nome) erros.gmudNome = "Informe o número da GMUD para usar as evidências.";
+    if (evidencias && !urlValida(evidencias)) erros.gmudEvidencias = "Link inválido (use http:// ou https://).";
+    else if (nome && !evidencias && regrasDoFormulario) erros.gmudEvidencias = "Com GMUD, informe o link das evidências.";
+    if (nome) gmud = { nome, titulo: titulo || null, link: link || null, evidencias: evidencias || null };
   }
 
   let git: AlteracaoGit | null = null;
@@ -424,7 +431,7 @@ function validar(dados: FormData, exigirCamada = true): Validacao {
     .getAll("siglas")
     .filter((s): s is Sigla => typeof s === "string" && pertence(siglasDisponiveis(), s));
   const camadas = dados.getAll("camadas").filter((c): c is Camada => typeof c === "string" && pertence(CAMADAS, c));
-  if (exigirCamada && camadas.length === 0) erros.camadas = "Marque ao menos uma camada (backend, frontend, database ou infra).";
+  if (regrasDoFormulario && camadas.length === 0) erros.camadas = "Marque ao menos uma camada (backend, frontend, database ou infra).";
   const servicosAws = dados
     .getAll("servicosAws")
     .filter((s): s is string => typeof s === "string" && pertence(servicosAwsDisponiveis(), s));
@@ -810,6 +817,7 @@ function iniciarEdicao(registro: Registro): void {
   definirValor("gmudNome", registro.gmud?.nome ?? "");
   definirValor("gmudLink", registro.gmud?.link ?? "");
   definirValor("gmudTitulo", registro.gmud?.titulo ?? "");
+  definirValor("gmudEvidencias", registro.gmud?.evidencias ?? "");
 
   marcarRadio("git", registro.git ? "sim" : "nao");
   definirValor("linkPr", registro.git?.linkPullRequest ?? "");
@@ -948,6 +956,7 @@ function criarLinha(registro: Registro): HTMLTableRowElement {
     git ? "Sim" : "Não",
     git?.linkPullRequest ? criarLink(git.linkPullRequest, "Pull Request") : VAZIO,
     git?.linkActions ? criarLink(git.linkActions, "Actions (prod)") : VAZIO,
+    gmud?.evidencias ? criarLink(gmud.evidencias, "Evidências") : VAZIO,
     acoes,
   ];
 
@@ -976,7 +985,7 @@ function passaNosFiltros(registro: Registro): boolean {
 function mostrarTabelaVazia(texto: string): void {
   const linha = document.createElement("tr");
   const celula = document.createElement("td");
-  celula.colSpan = 24;
+  celula.colSpan = 25;
   celula.className = "vazio";
   celula.textContent = texto;
   linha.append(celula);
@@ -1209,7 +1218,15 @@ function aplicarImportacao(importados: Registro[]): void {
       pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
       // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
       okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
-      gmud: r.gmud && !r.gmud.titulo && atual.gmud?.nome === r.gmud.nome ? { ...r.gmud, titulo: atual.gmud.titulo ?? null } : r.gmud,
+      // Mesma GMUD sem nome/evidências no CSV: mantém os do formulário.
+      gmud:
+        r.gmud && atual.gmud?.nome === r.gmud.nome
+          ? {
+              ...r.gmud,
+              titulo: r.gmud.titulo || atual.gmud.titulo || null,
+              evidencias: r.gmud.evidencias || atual.gmud.evidencias || null,
+            }
+          : r.gmud,
     };
   });
   const idsImportados = new Set(importados.map((r) => r.id));

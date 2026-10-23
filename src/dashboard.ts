@@ -1394,6 +1394,7 @@ function abrirDetalhesEntrega(registro: Registro): void {
 
   const links = criarElemento("div", "entrega-links");
   if (gmud?.link) links.append(criarLink(gmud.link, `GMUD ${gmud.nome}`));
+  if (gmud?.evidencias) links.append(criarLink(gmud.evidencias, "Evidências da GMUD"));
   if (git?.linkPullRequest) links.append(criarLink(git.linkPullRequest, "Pull Request"));
   if (git?.linkActions) links.append(criarLink(git.linkActions, "Deploy (Actions)"));
   if (links.childElementCount > 0) corpo.append(criarSecaoEntrega("Links", links));

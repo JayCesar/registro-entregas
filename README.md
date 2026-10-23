@@ -38,7 +38,7 @@ Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos
 
 1. Abra o Bloco de Notas, cole a linha abaixo e salve como `entregas.csv` (Tipo: *Todos os arquivos*, Codificação: *UTF-8*):
    ```
-   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo
+   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo;gmudEvidencias
    ```
 2. Abra o `entregas.csv` no Excel. Cada nome vira uma coluna, porque o `;` é o separador padrão do Excel em pt-BR.
 3. Preencha uma linha por entrega. O formato de cada coluna está na seção 3.
@@ -232,6 +232,7 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `microsservicos` | não | criados ou alterados, separados por `\|`; novos são aceitos e passam a existir | `ms-reservas` |
 | `pessoas` | não | pessoas envolvidas, separadas por `\|`; novas são aceitas. Só aparecem na aba Edição (nunca no dashboard nem na página publicada) | `Italo\|Thales` |
 | `gmudTitulo` | não | nome da GMUD (exige `gmudNome`, que é o número) | `Ajuste no fluxo de reservas` |
+| `gmudEvidencias` | não no CSV (**sim** no formulário quando há GMUD) | URL `https://...` da pasta/documento com as evidências da GMUD | `https://drive.empresa/gmud-48211` |
 
 **Duas regras valem para o formulário, o CSV e o JSON:**
 

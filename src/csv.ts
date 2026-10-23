@@ -43,6 +43,7 @@ const COLUNAS_CSV_OPCIONAIS = [
   "gmudNome",
   "gmudTitulo",
   "gmudLink",
+  "gmudEvidencias",
   "git",
   "linkPr",
   "linkActions",
@@ -57,6 +58,7 @@ const COLUNAS_CSV_TEXTO = [
   "gmudNome",
   "gmudTitulo",
   "gmudLink",
+  "gmudEvidencias",
   "linkPr",
   "linkActions",
 ] as const;
@@ -344,7 +346,7 @@ function lerLinhasDoCsv(
     const errosLinha: Erros = {};
     if (campos.length > cabecalho.length) errosLinha.colunas = "Há mais células do que colunas no cabeçalho.";
 
-    const resultado = validar(formDataDaLinha(linha, numerosOkr, errosLinha), false);
+    const resultado = validar(formDataDaLinha(linha, numerosOkr, errosLinha), false); // regras só do formulário ficam de fora
     // Os erros da conversão (data inválida etc.) são mais específicos que os de validar().
     if (!resultado.ok) Object.assign(errosLinha, { ...resultado.erros, ...errosLinha });
 

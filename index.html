@@ -408,9 +408,17 @@
           </div>
 
           <!-- Só quando há número de GMUD -->
-          <div class="campo largo" id="sec-gmud-titulo" hidden>
-            <label for="gmudTitulo">Nome da GMUD</label>
-            <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
+          <div class="gmud-extra" id="sec-gmud-titulo" hidden>
+            <div class="campo">
+              <label for="gmudTitulo">Nome da GMUD</label>
+              <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
+            </div>
+
+            <div class="campo">
+              <label for="gmudEvidencias">Link das evidências *</label>
+              <input type="url" id="gmudEvidencias" name="gmudEvidencias" placeholder="https://... (pasta ou documento com as evidências)">
+              <small class="erro" data-erro="gmudEvidencias"></small>
+            </div>
           </div>
         </div>
 
@@ -516,6 +524,7 @@
               <th>Git</th>
               <th>Pull Request</th>
               <th>Actions</th>
+              <th>Evidências</th>
               <th>Ações</th>
             </tr>
           </thead>

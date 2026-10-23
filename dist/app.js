@@ -180,8 +180,9 @@ function gerarId() {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 // ---------- Validação ----------
-// `exigirCamada` = false no CSV: planilhas de antes da coluna "camadas" continuam válidas.
-function validar(dados, exigirCamada = true) {
+// `regrasDoFormulario` = false no CSV: planilhas de antes das colunas "camadas" e
+// "gmudEvidencias" continuam válidas (no formulário os dois são obrigatórios).
+function validar(dados, regrasDoFormulario = true) {
     const erros = {};
     const tipo = texto(dados, "tipo");
     const squad = texto(dados, "squad");
@@ -289,8 +290,16 @@ function validar(dados, exigirCamada = true) {
         const titulo = texto(dados, "gmudTitulo");
         if (titulo && !nome)
             erros.gmudNome = "Informe o número da GMUD para usar o nome.";
+        // Teve GMUD, tem que ter evidências.
+        const evidencias = texto(dados, "gmudEvidencias");
+        if (evidencias && !nome)
+            erros.gmudNome = "Informe o número da GMUD para usar as evidências.";
+        if (evidencias && !urlValida(evidencias))
+            erros.gmudEvidencias = "Link inválido (use http:// ou https://).";
+        else if (nome && !evidencias && regrasDoFormulario)
+            erros.gmudEvidencias = "Com GMUD, informe o link das evidências.";
         if (nome)
-            gmud = { nome, titulo: titulo || null, link: link || null };
+            gmud = { nome, titulo: titulo || null, link: link || null, evidencias: evidencias || null };
     }
     let git = null;
     const houveAlteracaoGit = texto(dados, "git");
@@ -332,7 +341,7 @@ function validar(dados, exigirCamada = true) {
         .getAll("siglas")
         .filter((s) => typeof s === "string" && pertence(siglasDisponiveis(), s));
     const camadas = dados.getAll("camadas").filter((c) => typeof c === "string" && pertence(CAMADAS, c));
-    if (exigirCamada && camadas.length === 0)
+    if (regrasDoFormulario && camadas.length === 0)
         erros.camadas = "Marque ao menos uma camada (backend, frontend, database ou infra).";
     const servicosAws = dados
         .getAll("servicosAws")
@@ -670,6 +679,7 @@ function iniciarEdicao(registro) {
     definirValor("gmudNome", registro.gmud?.nome ?? "");
     definirValor("gmudLink", registro.gmud?.link ?? "");
     definirValor("gmudTitulo", registro.gmud?.titulo ?? "");
+    definirValor("gmudEvidencias", registro.gmud?.evidencias ?? "");
     marcarRadio("git", registro.git ? "sim" : "nao");
     definirValor("linkPr", registro.git?.linkPullRequest ?? "");
     definirValor("linkActions", registro.git?.linkActions ?? "");
@@ -791,6 +801,7 @@ function criarLinha(registro) {
         git ? "Sim" : "Não",
         git?.linkPullRequest ? criarLink(git.linkPullRequest, "Pull Request") : VAZIO,
         git?.linkActions ? criarLink(git.linkActions, "Actions (prod)") : VAZIO,
+        gmud?.evidencias ? criarLink(gmud.evidencias, "Evidências") : VAZIO,
         acoes,
     ];
     const linha = document.createElement("tr");
@@ -819,7 +830,7 @@ function passaNosFiltros(registro) {
 function mostrarTabelaVazia(texto) {
     const linha = document.createElement("tr");
     const celula = document.createElement("td");
-    celula.colSpan = 24;
+    celula.colSpan = 25;
     celula.className = "vazio";
     celula.textContent = texto;
     linha.append(celula);
@@ -1045,7 +1056,14 @@ function aplicarImportacao(importados) {
             pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
             // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
             okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
-            gmud: r.gmud && !r.gmud.titulo && atual.gmud?.nome === r.gmud.nome ? { ...r.gmud, titulo: atual.gmud.titulo ?? null } : r.gmud,
+            // Mesma GMUD sem nome/evidências no CSV: mantém os do formulário.
+            gmud: r.gmud && atual.gmud?.nome === r.gmud.nome
+                ? {
+                    ...r.gmud,
+                    titulo: r.gmud.titulo || atual.gmud.titulo || null,
+                    evidencias: r.gmud.evidencias || atual.gmud.evidencias || null,
+                }
+                : r.gmud,
         };
     });
     const idsImportados = new Set(importados.map((r) => r.id));
