@@ -43,6 +43,29 @@ function passoDoEixo(maximo) {
     }
     return 1000;
 }
+// Degradê vertical de uma cor (cheia no topo, translúcida na base), criado uma
+// vez por cor em cada gráfico. Devolve o valor para `fill`: "url(#id)".
+function criarPreenchimentoDegrade(defs, cache, cor) {
+    const existente = cache.get(cor);
+    if (existente)
+        return existente;
+    const id = `colunas-degrade-${++degradesCriados}`;
+    const gradiente = criarSvg("linearGradient", { id, x1: 0, y1: 0, x2: 0, y2: 1 });
+    for (const [offset, opacidade] of [
+        ["0%", "1"],
+        ["100%", "0.35"],
+    ]) {
+        const parada = criarSvg("stop", { offset: offset ?? "0%" });
+        parada.style.stopColor = cor;
+        parada.style.stopOpacity = opacidade ?? "1";
+        gradiente.append(parada);
+    }
+    defs.append(gradiente);
+    const preenchimento = `url(#${id})`;
+    cache.set(cor, preenchimento);
+    return preenchimento;
+}
+let degradesCriados = 0;
 function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinimaColuna = 56) {
     const temGrupos = colunas.some((c) => c.grupo !== undefined);
     const margem = { topo: 30, direita: 12, base: temGrupos ? 60 : 34, esquerda: 40 };
@@ -65,6 +88,9 @@ function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinim
     const yBase = yDe(0);
     const svg = criarSvg("svg", { class: "grafico-svg", width: largura, height: altura, role: "img" });
     svg.setAttribute("aria-label", descricao);
+    const defs = criarSvg("defs");
+    svg.append(defs);
+    const degradesPorCor = new Map();
     // Linhas de grade e valores do eixo.
     for (let valor = 0; valor <= topoDoEixo; valor += passo) {
         svg.append(criarSvg("line", {
@@ -109,7 +135,10 @@ function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinim
                 d: `M${esquerda},${base} V${topo + raio} Q${esquerda},${topo} ${esquerda + raio},${topo} ` +
                     `H${direita - raio} Q${direita},${topo} ${direita},${topo + raio} V${base} Z`,
             });
-            marca.style.fill = segmento.cor;
+            // Cada segmento tem o próprio degradê (bounding box), então numa coluna
+            // empilhada todos os tipos ficam com o mesmo "brilho" no topo.
+            marca.style.fill = criarPreenchimentoDegrade(defs, degradesPorCor, segmento.cor);
+            marca.style.stroke = segmento.cor;
             const linhas = [coluna.titulo, `${segmento.rotulo}: ${segmento.valor}`];
             if (coluna.segmentos.length > 1)
                 linhas.push(`Total: ${total}`);

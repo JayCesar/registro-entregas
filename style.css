@@ -540,6 +540,12 @@ label.botao:hover {
   stroke: var(--borda);
 }
 
+/* Contorno fino na própria cor: mantém a forma da coluna onde o degradê fica claro. */
+.grafico-segmento {
+  stroke-width: 1;
+  stroke-opacity: 0.6;
+}
+
 .grafico-segmento:hover {
   opacity: 0.8;
 }
