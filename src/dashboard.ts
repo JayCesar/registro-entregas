@@ -1291,6 +1291,7 @@ function criarCartaoEntrega(registro: Registro): HTMLElement {
     ...registro.okrs.map(criarChipOkr),
     ...registro.camadas.map((camada) => criarElemento("span", "etiqueta etiqueta-camada", camada)),
     ...registro.servicosAws.map((servico) => criarElemento("span", "etiqueta etiqueta-aws", servico)),
+    ...registro.tags.map((tag) => criarElemento("span", "etiqueta etiqueta-tag", `#${tag}`)),
   );
 
   const rodape = criarElemento("div", "entrega-rodape");
@@ -1384,6 +1385,7 @@ function abrirDetalhesEntrega(registro: Registro): void {
   if (registro.camadas.length > 0) adicionarDetalhe(detalhes, "Camadas", registro.camadas.join(", "));
   if (registro.servicosAws.length > 0) adicionarDetalhe(detalhes, "Serviços AWS", registro.servicosAws.join(", "));
   if (registro.microsservicos.length > 0) adicionarDetalhe(detalhes, "Microsserviços", registro.microsservicos.join(", "));
+  if (registro.tags.length > 0) adicionarDetalhe(detalhes, "Tags", registro.tags.join(", "));
   if (historia) {
     adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
     if (historia.funcional) adicionarDetalhe(detalhes, "BCP-Score", historia.bcp);
@@ -1437,6 +1439,7 @@ function textoPesquisavel(registro: Registro): string {
       ...registro.camadas,
       ...registro.servicosAws,
       ...registro.microsservicos,
+      ...registro.tags,
       historia?.funcional ? historia.bcp : "",
       gmud?.nome ?? "",
       gmud?.titulo ?? "",

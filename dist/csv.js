@@ -10,7 +10,7 @@
 // - datas em aaaa-mm-dd ou dd/mm/aaaa;
 // - OKRs em trios de colunas numeradas: okr1, okr1Grau, okr1Motivo, okr2...,
 //   com okr1Kr opcional (código do KR; em branco = o OKR como um todo);
-// - siglas, camadas, servicosAws, microsservicos e pessoas separados por "|" na mesma célula;
+// - siglas, camadas, servicosAws, microsservicos, tags e pessoas separados por "|" na mesma célula;
 // - id opcional: se preenchido, reimportar o arquivo atualiza em vez de duplicar;
 // - squads, siglas, serviços AWS e microsserviços que ainda não existem são
 //   aceitos e passam a existir. Camadas só da lista fixa (config.ts).
@@ -32,6 +32,7 @@ const COLUNAS_CSV_OPCIONAIS = [
     "camadas",
     "servicosAws",
     "microsservicos",
+    "tags",
     "pessoas",
     "impeditivo",
     "classificacao",
@@ -223,6 +224,7 @@ function formDataDaLinha(linha, numerosOkr, erros) {
     for (const [coluna, disponiveis] of [
         ["servicosAws", servicosAwsDisponiveis],
         ["microsservicos", microsservicosDisponiveis],
+        ["tags", tagsDisponiveis],
         ["pessoas", pessoasDisponiveis],
     ]) {
         for (const item of valor(coluna).split("|")) {
@@ -284,12 +286,14 @@ function registrosDoCsv(conteudo) {
         for (const [coluna, disponiveis] of [
             ["servicosaws", servicosAwsDisponiveis],
             ["microsservicos", microsservicosDisponiveis],
+            ["tags", tagsDisponiveis],
             ["pessoas", pessoasDisponiveis],
         ]) {
             const posicao = cabecalho.indexOf(coluna);
             const novos = {
                 servicosaws: opcoesDoCsvEmLeitura.servicosAws,
                 microsservicos: opcoesDoCsvEmLeitura.microsservicos,
+                tags: opcoesDoCsvEmLeitura.tags,
                 pessoas: opcoesDoCsvEmLeitura.pessoas,
             }[coluna];
             for (const item of (posicao >= 0 ? (campos[posicao] ?? "") : "").split("|")) {
@@ -308,6 +312,7 @@ function registrosDoCsv(conteudo) {
         opcoesDoCsvEmLeitura.servicosAws.clear();
         opcoesDoCsvEmLeitura.microsservicos.clear();
         opcoesDoCsvEmLeitura.pessoas.clear();
+        opcoesDoCsvEmLeitura.tags.clear();
     }
     return { registros: importados, erros };
 }

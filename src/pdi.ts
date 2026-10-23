@@ -39,7 +39,7 @@ interface VersaoPdi {
 // O que vai cifrado na página publicada.
 interface ConteudoPdiPublicado {
   versoes: VersaoPdi[];
-  vinculos: Record<string, VinculoPdi>; // id da entrega -> vínculo (sempre com versão)
+  vinculos: Record<string, VinculoPdi[]>; // id da entrega -> pontos do PDI (sempre com versão)
 }
 
 // Cor e ícone de cada ponto, iguais no formulário e no dashboard.
@@ -273,15 +273,12 @@ function tituloDoPonto(ponto: PontoPdi): string {
 
 // ---------- Vínculo no formulário da entrega ----------
 
-// "Sem vínculo" e um bloco recolhível (<details>) por versão do PDI, com os
-// pontos em cartões. O mesmo ponto pode existir em várias versões, então o
-// radio pdiPonto leva "versão|ponto" (ver validar em app.ts). A intensidade
-// (pdiIntensidade) só aparece com um ponto escolhido.
+// Um bloco recolhível (<details>) por versão do PDI, com os pontos em cartões.
+// Cada cartão é uma caixa de marcar (pdiPonto = "versão|ponto": o mesmo ponto pode
+// existir em várias versões), e a entrega pode marcar quantos quiser. Logo abaixo de
+// cada cartão ficam as intensidades daquele ponto (pdiIntensidade-<versão|ponto>),
+// que só aparecem com ele marcado. Ver validar em app.ts.
 const escolhaVinculoPdi = el<HTMLDivElement>("pdi-vinculo-escolha");
-const escolhaIntensidadesPdi = el<HTMLDivElement>("pdi-intensidades-escolha");
-const blocoIntensidadePdi = el<HTMLElement>("pdi-intensidade-bloco");
-// Sem ponto escolhido, a intensidade volta (escondida) para o lugar dela no HTML.
-const lugarDaIntensidadePdi = blocoIntensidadePdi.parentElement;
 
 const DICA_INTENSIDADE: Record<IntensidadePdi, string> = {
   baixo: "tocou no ponto",
@@ -292,7 +289,7 @@ const DICA_INTENSIDADE: Record<IntensidadePdi, string> = {
 // Vínculo salvo ou o que está marcado agora (a intensidade pode ainda não ter sido escolhida).
 type VinculoEmEdicao = { versao: string | null; ponto: string; intensidade: string };
 
-function criarCartaoEscolhaPonto(valor: string, ponto: PontoPdi | null, marcado: boolean): HTMLLabelElement {
+function criarItemPonto(valor: string, ponto: PontoPdi | null, marcado: VinculoEmEdicao | undefined): HTMLElement {
   const conteudo = document.createElement("span");
   conteudo.className = "ponto-escolha-conteudo";
   const etiqueta = document.createElement("span");
@@ -309,29 +306,44 @@ function criarCartaoEscolhaPonto(valor: string, ponto: PontoPdi | null, marcado:
     icone.append(criarIcone(estilo.icone));
     etiqueta.append(icone, etiquetaDoPonto(ponto));
     titulo.textContent = tituloDoPonto(ponto);
-    titulo.title = titulo.textContent;
-  } else if (valor) {
+  } else {
     etiqueta.textContent = "Fora desta versão";
     titulo.textContent = "Ponto que não existe mais nesta versão do PDI";
-  } else {
-    etiqueta.textContent = "Sem vínculo";
-    titulo.textContent = "Esta entrega não move nenhum ponto do PDI";
   }
+  titulo.title = titulo.textContent;
   conteudo.append(etiqueta, titulo);
 
-  const cartao = criarEscolha("radio", "pdiPonto", valor, conteudo, marcado);
+  const cartao = criarEscolha("checkbox", "pdiPonto", valor, conteudo, !!marcado);
   cartao.classList.add("ponto-escolha");
-  // A cor vai no cartão inteiro: a faixa lateral acompanha a altura da linha da grade.
-  cartao.style.setProperty("--cor-ponto", cor);
-  if (!valor) cartao.classList.add("ponto-escolha-nenhum");
-  return cartao;
+
+  // Intensidade deste ponto: três pílulas pequenas, só com o ponto marcado.
+  const intensidades = document.createElement("div");
+  intensidades.className = "escolhas ponto-intensidades";
+  intensidades.setAttribute("role", "radiogroup");
+  intensidades.ariaLabel = `Intensidade no ponto: ${titulo.textContent}`;
+  intensidades.append(
+    ...INTENSIDADES_PDI.map((intensidade) => {
+      const texto = document.createElement("span");
+      texto.className = `intensidade-escolha intensidade-${semAcentoMinusculo(intensidade)}`;
+      texto.textContent = intensidade.charAt(0).toUpperCase() + intensidade.slice(1);
+      texto.title = DICA_INTENSIDADE[intensidade];
+      return criarEscolha("radio", `pdiIntensidade-${valor}`, intensidade, texto, marcado?.intensidade === intensidade);
+    }),
+  );
+
+  // A cor vai no item inteiro: a faixa lateral acompanha a altura da linha da grade.
+  const item = document.createElement("div");
+  item.className = "ponto-item";
+  item.style.setProperty("--cor-ponto", cor);
+  item.append(cartao, intensidades);
+  return item;
 }
 
 function criarBlocoVersao(
   versao: VersaoPdi | null,
   idVersao: string,
   rotulo: string,
-  selecionado: VinculoEmEdicao | null,
+  marcados: VinculoEmEdicao[],
   aberto: boolean,
   maisRecente: boolean,
 ): HTMLDetailsElement {
@@ -347,7 +359,7 @@ function criarBlocoVersao(
   const info = document.createElement("span");
   info.className = "dica";
   info.textContent = versao ? `${pontos.length} pontos` : "versão excluída";
-  // Preenchido por atualizarIntensidadePdi: mostra o ponto escolhido com o bloco fechado.
+  // Preenchido por atualizarPontosPdi: resume o que está marcado com o bloco fechado.
   const escolhido = document.createElement("span");
   escolhido.className = "pdi-versao-escolhido";
   resumo.append(nome);
@@ -359,77 +371,77 @@ function criarBlocoVersao(
   }
   resumo.append(info, escolhido);
 
+  const daVersao = marcados.filter((m) => m.versao === idVersao);
   const grade = document.createElement("div");
   grade.className = "pontos-escolha";
-  const pontoMarcado = selecionado?.versao === idVersao ? selecionado.ponto : "";
-  grade.append(...pontos.map((ponto) => criarCartaoEscolhaPonto(`${idVersao}|${ponto.id}`, ponto, ponto.id === pontoMarcado)));
-  if (pontoMarcado && !pontos.some((p) => p.id === pontoMarcado)) {
-    grade.append(criarCartaoEscolhaPonto(`${idVersao}|${pontoMarcado}`, null, true));
-  }
+  grade.append(
+    ...pontos.map((ponto) => criarItemPonto(`${idVersao}|${ponto.id}`, ponto, daVersao.find((m) => m.ponto === ponto.id))),
+    // Ponto que saiu da versão continua marcado enquanto a entrega o usar.
+    ...daVersao
+      .filter((m) => !pontos.some((p) => p.id === m.ponto))
+      .map((m) => criarItemPonto(`${idVersao}|${m.ponto}`, null, m)),
+  );
   bloco.append(resumo, grade);
   return bloco;
 }
 
-// A intensidade é do ponto escolhido: fica dentro do bloco da versão dele, logo
-// abaixo dos cartões. Sem ponto, some e fica desabilitada (não entra no FormData).
-function atualizarIntensidadePdi(): void {
-  const marcado = escolhaVinculoPdi.querySelector<HTMLInputElement>("input:checked");
-  const temPonto = !!marcado?.value;
-  const blocoDaVersao = temPonto ? marcado?.closest<HTMLDetailsElement>(".pdi-versao-bloco") : null;
-  if (blocoDaVersao) blocoDaVersao.append(blocoIntensidadePdi);
-  else lugarDaIntensidadePdi?.append(blocoIntensidadePdi);
-  blocoIntensidadePdi.hidden = !temPonto;
-  for (const radio of escolhaIntensidadesPdi.querySelectorAll("input")) radio.disabled = !temPonto;
+// Mostra as intensidades só dos pontos marcados (as outras ficam desabilitadas e
+// não entram no FormData) e resume a marcação no título de cada versão.
+function atualizarPontosPdi(): void {
+  for (const item of escolhaVinculoPdi.querySelectorAll<HTMLElement>(".ponto-item")) {
+    const marcado = item.querySelector<HTMLInputElement>('input[name="pdiPonto"]')?.checked ?? false;
+    item.classList.toggle("marcado", marcado);
+    const intensidades = item.querySelector<HTMLElement>(".ponto-intensidades");
+    if (intensidades) intensidades.hidden = !marcado;
+    for (const radio of intensidades?.querySelectorAll("input") ?? []) radio.disabled = !marcado;
+  }
   for (const bloco of escolhaVinculoPdi.querySelectorAll<HTMLDetailsElement>(".pdi-versao-bloco")) {
-    const escolhidoAqui = marcado && bloco.contains(marcado) ? marcado : null;
-    const texto = escolhidoAqui?.closest("label")?.querySelector(".ponto-escolha-titulo")?.textContent ?? "";
+    const titulos = [...bloco.querySelectorAll<HTMLInputElement>('input[name="pdiPonto"]:checked')].map(
+      (caixa) => caixa.closest("label")?.querySelector(".ponto-escolha-titulo")?.textContent ?? "",
+    );
     const alvo = bloco.querySelector(".pdi-versao-escolhido");
-    if (alvo) alvo.textContent = texto ? `✓ ${texto}` : "";
+    if (alvo) {
+      alvo.textContent =
+        titulos.length === 0 ? "" : titulos.length === 1 ? `✓ ${titulos[0]}` : `✓ ${titulos.length} pontos marcados`;
+    }
   }
 }
 
-function preencherVinculoPdi(vinculo: VinculoEmEdicao | null): void {
+function preencherVinculoPdi(vinculos: VinculoEmEdicao[]): void {
   const versoes = carregarVersoesPdi();
-  const selecionado = vinculo && { ...vinculo, versao: vinculo.versao ?? versoes[0]?.id ?? "" };
-  const aberta = selecionado?.versao ?? versoes.at(-1)?.id ?? "";
+  // Vínculo de antes das versões (versao null) conta como da primeira versão.
+  const marcados = vinculos.map((v) => ({ ...v, versao: v.versao ?? versoes[0]?.id ?? "" }));
+  const comMarcacao = new Set(marcados.map((m) => m.versao));
+  const maisRecente = versoes.at(-1)?.id ?? "";
+  // Abre as versões com pontos marcados; sem nenhum, a mais recente.
+  const aberta = (id: string): boolean => (comMarcacao.size > 0 ? comMarcacao.has(id) : id === maisRecente);
 
   const blocos = [...versoes].reverse().map((versao) =>
-    criarBlocoVersao(versao, versao.id, rotuloVersaoPdi(versao, versoes), selecionado, versao.id === aberta, versao === versoes.at(-1)),
+    criarBlocoVersao(versao, versao.id, rotuloVersaoPdi(versao, versoes), marcados, aberta(versao.id), versao.id === maisRecente),
   );
-  // Vínculo numa versão que foi excluída continua visível enquanto a entrega o usar.
-  if (selecionado?.versao && !versoes.some((v) => v.id === selecionado.versao)) {
-    blocos.push(criarBlocoVersao(null, selecionado.versao, "Versão excluída", selecionado, true, false));
+  // Vínculos numa versão que foi excluída continuam visíveis enquanto a entrega os usar.
+  for (const id of comMarcacao) {
+    if (id && !versoes.some((v) => v.id === id)) blocos.push(criarBlocoVersao(null, id, "Versão excluída", marcados, true, false));
   }
 
-  escolhaVinculoPdi.replaceChildren(criarCartaoEscolhaPonto("", null, !selecionado), ...blocos);
+  escolhaVinculoPdi.replaceChildren(...blocos);
   if (versoes.length === 0) {
     const aviso = document.createElement("p");
     aviso.className = "dica";
     aviso.textContent = "Cadastre o PDI no fim desta aba para vincular entregas.";
     escolhaVinculoPdi.append(aviso);
   }
-
-  escolhaIntensidadesPdi.replaceChildren(
-    ...INTENSIDADES_PDI.map((intensidade) => {
-      const texto = document.createElement("span");
-      texto.className = `intensidade-escolha intensidade-${semAcentoMinusculo(intensidade)}`;
-      const nome = document.createElement("strong");
-      nome.textContent = intensidade.charAt(0).toUpperCase() + intensidade.slice(1);
-      const dica = document.createElement("small");
-      dica.textContent = DICA_INTENSIDADE[intensidade];
-      texto.append(nome, dica);
-      return criarEscolha("radio", "pdiIntensidade", intensidade, texto, vinculo?.intensidade === intensidade);
-    }),
-  );
-  atualizarIntensidadePdi();
+  atualizarPontosPdi();
 }
 
 // O que está marcado agora no formulário da entrega (para refazer as opções sem perder).
-function vinculoNoFormulario(): VinculoEmEdicao | null {
-  const marcado = (nome: string): string =>
-    document.querySelector<HTMLInputElement>(`#form-registro input[name="${nome}"]:checked`)?.value ?? "";
-  const [versao = "", ponto = ""] = marcado("pdiPonto").split("|");
-  return ponto ? { versao: versao || null, ponto, intensidade: marcado("pdiIntensidade") } : null;
+function vinculosNoFormulario(): VinculoEmEdicao[] {
+  return [...escolhaVinculoPdi.querySelectorAll<HTMLInputElement>('input[name="pdiPonto"]:checked')].map((caixa) => {
+    const [versao = "", ponto = ""] = caixa.value.split("|");
+    const intensidade =
+      caixa.closest(".ponto-item")?.querySelector<HTMLInputElement>('.ponto-intensidades input:checked')?.value ?? "";
+    return { versao: versao || null, ponto, intensidade };
+  });
 }
 
 // ---------- Formulário do PDI (aba de edição) ----------
@@ -627,7 +639,7 @@ function criarCartaoVersaoPdi(versao: VersaoPdi, versoes: VersaoPdi[]): HTMLButt
 }
 
 function vinculosDaVersao(id: string, versoes: VersaoPdi[]): number {
-  return registros.filter((r) => r.pdi && idDaVersaoDoVinculo(r.pdi, versoes) === id).length;
+  return registros.filter((r) => r.pdis.some((v) => idDaVersaoDoVinculo(v, versoes) === id)).length;
 }
 
 // Nova versão entra no fim (mais recente) e passa a ser a sugerida nas entregas novas.
@@ -636,7 +648,7 @@ function adicionarVersaoPdi(pdi: Pdi): void {
   const nova: VersaoPdi = { id: gerarIdVersaoPdi(), criadaEm: new Date().toISOString(), pdi };
   salvarVersoesPdi([...versoes, nova]);
   mostrarVersaoPdi(nova.id);
-  preencherVinculoPdi(null);
+  preencherVinculoPdi([]);
 }
 
 const agora = (): string => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
@@ -653,8 +665,7 @@ function aoSalvarPdi(evento: SubmitEvent): void {
   }
   renderizarTabela(); // os textos da coluna PDI podem ter mudado
   // Sem limpar o que está sendo digitado na entrega: só refaz as opções.
-  const atual = vinculoNoFormulario();
-  preencherVinculoPdi(atual);
+  preencherVinculoPdi(vinculosNoFormulario());
   statusPdi.textContent = `PDI salvo às ${agora()}.`;
 }
 
@@ -675,7 +686,7 @@ function excluirVersaoPdi(): void {
   if (!confirm(`Excluir a versão "${rotuloVersaoPdi(versao, versoes)}" do PDI?`)) return;
   salvarVersoesPdi(versoes.filter((v) => v.id !== versao.id));
   mostrarVersaoPdi(null);
-  preencherVinculoPdi(vinculoNoFormulario());
+  preencherVinculoPdi(vinculosNoFormulario());
   statusPdi.textContent = "Versão excluída.";
 }
 
@@ -783,7 +794,9 @@ async function tagDoPdiPublicado(): Promise<string> {
   if (!CHAVE_PDI || versoes.length === 0) return "";
   // Vínculos antigos (sem versão) já vão com a versão resolvida.
   const vinculos = Object.fromEntries(
-    registros.flatMap((r) => (r.pdi ? [[r.id, { ...r.pdi, versao: idDaVersaoDoVinculo(r.pdi, versoes) }]] : [])),
+    registros
+      .filter((r) => r.pdis.length > 0)
+      .map((r) => [r.id, r.pdis.map((v) => ({ ...v, versao: idDaVersaoDoVinculo(v, versoes) }))]),
   );
   const envelope = await cifrarParaCoordenador(CHAVE_PDI, { versoes, vinculos });
   // Só base64 e JSON: nenhum "<" que feche a tag antes da hora.
@@ -792,21 +805,25 @@ async function tagDoPdiPublicado(): Promise<string> {
 
 // ---------- Coluna PDI na tabela da aba de edição ----------
 
-// "Gap · Técnica: <gap a desenvolver> (forte)"; com várias versões, diz qual.
-function textoDoVinculoPdi(vinculo: VinculoPdi | null): string {
-  if (!vinculo) return "—";
+// "Gap · Técnica: <gap a desenvolver> (forte)", um por ponto; com várias versões, diz qual.
+function textoDoVinculoPdi(vinculos: VinculoPdi[]): string {
+  if (vinculos.length === 0) return "—";
   const versoes = carregarVersoesPdi();
-  const versao = versoes.find((v) => v.id === idDaVersaoDoVinculo(vinculo, versoes));
-  const ponto = pontosDoPdi(versao?.pdi ?? null).find((p) => p.id === vinculo.ponto);
-  const nome = ponto ? `${etiquetaDoPonto(ponto)}: ${tituloDoPonto(ponto)}` : "Ponto fora do PDI";
-  const qual = versoes.length > 1 && versao ? ` · ${rotuloVersaoPdi(versao, versoes)}` : "";
-  return `${nome} (${vinculo.intensidade})${qual}`;
+  return vinculos
+    .map((vinculo) => {
+      const versao = versoes.find((v) => v.id === idDaVersaoDoVinculo(vinculo, versoes));
+      const ponto = pontosDoPdi(versao?.pdi ?? null).find((p) => p.id === vinculo.ponto);
+      const nome = ponto ? `${etiquetaDoPonto(ponto)}: ${tituloDoPonto(ponto)}` : "Ponto fora do PDI";
+      const qual = versoes.length > 1 && versao ? ` · ${rotuloVersaoPdi(versao, versoes)}` : "";
+      return `${nome} (${vinculo.intensidade})${qual}`;
+    })
+    .join("; ");
 }
 
 // ---------- Inicialização ----------
 
 mostrarVersaoPdi(null);
-preencherVinculoPdi(null);
+preencherVinculoPdi([]);
 renderizarTabela(); // app.ts: primeira vez aqui, porque a coluna PDI usa textoDoVinculoPdi
 
 formularioPdi.addEventListener("submit", aoSalvarPdi);
@@ -814,4 +831,4 @@ el<HTMLButtonElement>("btn-nova-versao-pdi").addEventListener("click", criarNova
 el<HTMLButtonElement>("btn-excluir-versao-pdi").addEventListener("click", excluirVersaoPdi);
 el<HTMLButtonElement>("btn-exportar-pdi").addEventListener("click", exportarPdi);
 campoImportarPdi.addEventListener("change", () => void importarPdi());
-escolhaVinculoPdi.addEventListener("change", atualizarIntensidadePdi);
+escolhaVinculoPdi.addEventListener("change", atualizarPontosPdi);

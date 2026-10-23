@@ -56,6 +56,8 @@ const SERVICOS_AWS = [
 ];
 // Microsserviços criados ou alterados: começa vazio e cresce pelo formulário.
 const MICROSSERVICOS = [];
+// Tags livres da entrega (ex.: Angular, React): começa vazio e cresce pelo formulário.
+const TAGS = [];
 // Intensidade com que uma entrega move um ponto do PDI, da menor para a maior.
 const INTENSIDADES_PDI = ["baixo", "médio", "forte"];
 // Chave da seção PDI do dashboard, liberada só com a senha do coordenador.

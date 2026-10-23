@@ -112,10 +112,10 @@ function montarTagDeDados() {
     }
     if (!Array.isArray(entregas)) falhar('O JSON não é uma lista de entregas. Use o "Exportar JSON" do site.');
     if (entregas.length === 0) falhar("O JSON está vazio: importe o CSV no site antes de exportar.");
-    // Os vínculos com o PDI (campo pdi) são restritos ao coordenador e não vão
+    // Os vínculos com o PDI (campos pdis e o antigo pdi) são restritos ao coordenador e não vão
     // abertos. Só o botão "Gerar página para o S3" leva o PDI, cifrado.
     // Pessoas envolvidas só servem para a aba de edição: também ficam fora.
-    const semPdi = entregas.map((entrega) => ({ ...entrega, pdi: null, pessoas: [] }));
+    const semPdi = entregas.map(({ pdi, ...entrega }) => ({ ...entrega, pdis: [], pessoas: [] }));
     const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
     return { quantidade: entregas.length, tag: `<script type="application/json" id="dados-publicados">${json}</script>` };
   }

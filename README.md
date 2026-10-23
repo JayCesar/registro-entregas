@@ -38,7 +38,7 @@ Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos
 
 1. Abra o Bloco de Notas, cole a linha abaixo e salve como `entregas.csv` (Tipo: *Todos os arquivos*, Codificação: *UTF-8*):
    ```
-   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo;gmudEvidencias
+   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo;gmudEvidencias;tags
    ```
 2. Abra o `entregas.csv` no Excel. Cada nome vira uma coluna, porque o `;` é o separador padrão do Excel em pt-BR.
 3. Preencha uma linha por entrega. O formato de cada coluna está na seção 3.
@@ -194,7 +194,7 @@ Opções do `npm run publicar`:
 
 ## 3. Formato do CSV
 
-O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 entregas de **todos os tipos** (inclusive História funcional e não funcional), está em `exemplos/entregas-exemplo.csv`.
+O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 entregas de **todos os tipos** (inclusive História funcional e não funcional), está em `exemplos/entregas-exemplo.csv`. Ele usa os OKRs `A`, `B` e `C`: para importá-lo, cadastre antes OKRs com esses códigos (cartão **OKRs e KRs**).
 
 - **Separador:** `;` (padrão do Excel em pt-BR). `,` também funciona.
 - **Codificação:** UTF-8 ou a padrão do Excel (Windows-1252). As duas são aceitas.
@@ -230,6 +230,7 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `camadas` | não no CSV (**sim** no formulário) | `Backend`, `Frontend`, `Database`, `Infra`, separadas por `\|` | `Backend\|Database` |
 | `servicosAws` | não | separados por `\|`; serviços novos são aceitos e passam a existir | `ECS\|SQS` |
 | `microsservicos` | não | criados ou alterados, separados por `\|`; novos são aceitos e passam a existir | `ms-reservas` |
+| `tags` | não | tags livres (ex.: tecnologia), separadas por `\|`; novas são aceitas e passam a existir | `Angular\|React` |
 | `pessoas` | não | pessoas envolvidas, separadas por `\|`; novas são aceitas. Só aparecem na aba Edição (nunca no dashboard nem na página publicada) | `Italo\|Thales` |
 | `gmudTitulo` | não | nome da GMUD (exige `gmudNome`, que é o número) | `Ajuste no fluxo de reservas` |
 | `gmudEvidencias` | não no CSV (**sim** no formulário quando há GMUD) | URL `https://...` da pasta/documento com as evidências da GMUD | `https://drive.empresa/gmud-48211` |
@@ -339,7 +340,7 @@ Por que a página é **um arquivo só**: o link pré-assinado vale para um únic
 
 - **Cadastro:** aba Edição → cartão **PDI**. As versões aparecem em cartões no topo (checkpoint, pontos, entregas ligadas); clicar abre a versão no formulário. Os campos e as chaves são os do JSON do site da gestora (`{ "versao": 1, "campos": { ... } }`). **Importar JSON como nova versão** lê o arquivo dela sem conversão, e **Exportar JSON do PDI** devolve o mesmo formato.
 - **Versões:** cada PDI novo (novo checkpoint) é uma **versão**. Importar um JSON cria uma versão; **Nova versão (copiar esta)** cria uma a partir da atual para você ajustar. Uma versão com entregas ligadas não pode ser excluída.
-- **Vínculo:** no formulário da entrega, cada **versão do PDI** é um bloco que abre e fecha (abre a mais recente). Escolha o **ponto** (gap ou experiência, em cartões) e a **intensidade** (baixo, médio ou forte). É opcional. Cada entrega fica presa à versão em que foi registrada, e entregas antigas contam na primeira versão. Reimportar o CSV não apaga os vínculos.
+- **Vínculo:** no formulário da entrega, cada **versão do PDI** é um bloco que abre e fecha (abre a mais recente). Marque **um ou mais pontos** (gaps ou experiências, em cartões) e, em cada um, a **intensidade** (baixo, médio ou forte). É opcional. Cada ponto fica preso à versão em que foi marcado, e entregas antigas contam na primeira versão. Reimportar o CSV não apaga os vínculos.
 - **Dashboard:** a seção **05 · PDI** só mostra o conteúdo com a **senha do coordenador**, que é diferente da senha de edição. Mostra indicadores, um ranking de quanto cada ponto está sendo mexido (forte 3, médio 2, baixo 1 ponto), o esforço por categoria e um cartão por ponto. Com mais de uma versão, os chips no topo trocam a versão exibida.
 
 ### Configurar a senha do coordenador (uma vez, no PC com Node)
