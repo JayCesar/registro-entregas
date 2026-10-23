@@ -30,11 +30,14 @@ const maiuscula = (texto: string): string => texto.charAt(0).toUpperCase() + tex
 // ---------- Desbloqueio ----------
 
 // Páginas publicadas antes das versões levavam { pdi, vinculos }: vira uma versão só.
+// E antes de vários pontos por entrega, cada vínculo era um objeto: vira lista de um.
 function conteudoPublicado(valor: unknown): ConteudoPdiPublicado | null {
   if (typeof valor !== "object" || valor === null) return null;
   const { versoes, pdi, vinculos } = valor as Record<string, unknown>;
   if (typeof vinculos !== "object" || vinculos === null) return null;
-  const mapa = vinculos as Record<string, VinculoPdi>;
+  const mapa = Object.fromEntries(
+    Object.entries(vinculos as Record<string, VinculoPdi | VinculoPdi[]>).map(([id, v]) => [id, Array.isArray(v) ? v : [v]]),
+  );
   if (Array.isArray(versoes) && versoes.every(versaoPdiValida)) return { versoes, vinculos: mapa };
   if (pdiValido(pdi)) return { versoes: [{ id: "publicado", criadaEm: "", pdi }], vinculos: mapa };
   return null;
@@ -350,7 +353,7 @@ function criarCartaoRitmoPdi(): HTMLElement {
   const textos = criarElemento("div");
   textos.append(
     criarElemento("h2", "", "Ritmo do PDI"),
-    criarElemento("p", "dica", "Entregas ligadas a pontos do PDI ao longo do tempo, no total e por intensidade."),
+    criarElemento("p", "dica", "Entregas ligadas a pontos do PDI ao longo do tempo, no total e por intensidade (cada entrega conta pela maior intensidade entre os pontos que move)."),
   );
   const abas = criarElemento("div", "abas-texto");
   abas.setAttribute("role", "group");
@@ -402,10 +405,11 @@ function desenharRitmoPdi(): void {
 
 function renderizarPainelPdi(conteudo: ConteudoPdiPublicado | "local"): void {
   const versoes = conteudo === "local" ? carregarVersoesPdi() : conteudo.versoes;
-  const vinculoDe = (registro: Registro): VinculoPdi | null => {
-    const vinculo = conteudo === "local" ? registro.pdi : (conteudo.vinculos[registro.id] ?? null);
-    return vinculo && { ...vinculo, versao: idDaVersaoDoVinculo(vinculo, versoes) };
-  };
+  const vinculosDe = (registro: Registro): VinculoPdi[] =>
+    (conteudo === "local" ? registro.pdis : (conteudo.vinculos[registro.id] ?? [])).map((vinculo) => ({
+      ...vinculo,
+      versao: idDaVersaoDoVinculo(vinculo, versoes),
+    }));
   const versao = versoes.find((v) => v.id === versaoPdiDashboard) ?? versoes.at(-1);
   const pdi = versao?.pdi ?? null;
   const campos = pdi?.campos ?? {};
@@ -454,10 +458,12 @@ function renderizarPainelPdi(conteudo: ConteudoPdiPublicado | "local"): void {
   const pontos = pontosDoPdi(pdi);
   const porPonto = new Map<string, EntregaDoPonto[]>(pontos.map((p) => [p.id, []]));
   const foraDoPdi: EntregaDoPonto[] = [];
+  // Uma entrega pode mover vários pontos: entra em cada um, com a intensidade daquele ponto.
   for (const registro of registrosFiltrados) {
-    const vinculo = vinculoDe(registro);
-    if (!vinculo || vinculo.versao !== versao.id) continue;
-    (porPonto.get(vinculo.ponto) ?? foraDoPdi).push({ registro, intensidade: vinculo.intensidade });
+    for (const vinculo of vinculosDe(registro)) {
+      if (vinculo.versao !== versao.id) continue;
+      (porPonto.get(vinculo.ponto) ?? foraDoPdi).push({ registro, intensidade: vinculo.intensidade });
+    }
   }
   const resumos: ResumoPonto[] = pontos.map((ponto) => {
     const itens = porPonto.get(ponto.id) ?? [];
@@ -468,17 +474,19 @@ function renderizarPainelPdi(conteudo: ConteudoPdiPublicado | "local"): void {
     resumos.push({ ponto, estilo: { categoria: "Removido", cor: "var(--grau-indefinido)", icone: "alerta" }, itens: foraDoPdi, pontuacao: pontuacaoDe(foraDoPdi) });
   }
 
+  // `todas` tem um item por ponto movido; `entregas`, cada entrega uma vez só.
   const todas = resumos.flatMap((r) => r.itens);
+  const entregas = new Set(todas.map((item) => item.registro.id)).size;
   const pontuacaoTotal = pontuacaoDe(todas);
   const movidos = resumos.filter((r) => r.itens.length > 0).length;
   const media = todas.length > 0 ? pontuacaoTotal / todas.length : 0;
 
   const kpis = criarElemento("div", "faixa-kpis pdi-kpis");
   kpis.append(
-    criarIndicador("Entregas no PDI", todas.length.toString(), {
+    criarIndicador("Entregas no PDI", entregas.toString(), {
       icone: "lista",
       unidade: `de ${registrosFiltrados.length}`,
-      percentual: percentualDe(todas.length, registrosFiltrados.length),
+      percentual: percentualDe(entregas, registrosFiltrados.length),
       complemento: "da seleção movem algum ponto desta versão",
     }),
     criarIndicador("Pontos em movimento", movidos.toString(), {
@@ -495,7 +503,12 @@ function renderizarPainelPdi(conteudo: ConteudoPdiPublicado | "local"): void {
     }),
   );
 
-  intensidadesNoRitmoPdi = new Map(todas.map((item) => [item.registro.id, item.intensidade]));
+  // No ritmo cada entrega conta uma vez, pela maior intensidade entre os pontos dela.
+  intensidadesNoRitmoPdi = new Map();
+  for (const { registro, intensidade } of todas) {
+    const atual = intensidadesNoRitmoPdi.get(registro.id);
+    if (!atual || PESO_INTENSIDADE[intensidade] > PESO_INTENSIDADE[atual]) intensidadesNoRitmoPdi.set(registro.id, intensidade);
+  }
   const graficos = criarElemento("div", "grade-12");
   if (todas.length > 0) {
     graficos.append(criarCartaoRitmoPdi(), criarRankingPontos(resumos), criarRoscaCategorias(resumos));

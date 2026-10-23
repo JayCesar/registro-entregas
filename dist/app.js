@@ -4,7 +4,8 @@ const PADRAO_PONTO_PDI = /^(gap|exp)_[a-z0-9]+$/;
 // ---------- Persistência ----------
 const CHAVE_STORAGE = "registro-entregas:v1";
 function migrarRegistro(salvo) {
-    const { okr, okrs, ...resto } = salvo;
+    // `pdi` (formato antigo, um ponto só) vira a lista `pdis` e não fica no registro.
+    const { okr, okrs, pdi, ...resto } = salvo;
     return {
         ...resto,
         okrs: Array.isArray(okrs) ? okrs : okr ? [{ okr, motivo: "", grau: null }] : [],
@@ -14,10 +15,11 @@ function migrarRegistro(salvo) {
         historia: salvo.historia ?? null,
         gmud: salvo.gmud ?? null,
         git: salvo.git ?? null,
-        pdi: salvo.pdi ?? null,
+        pdis: Array.isArray(salvo.pdis) ? salvo.pdis : pdi ? [pdi] : [],
         camadas: salvo.camadas ?? [],
         servicosAws: salvo.servicosAws ?? [],
         microsservicos: salvo.microsservicos ?? [],
+        tags: salvo.tags ?? [],
         pessoas: salvo.pessoas ?? [],
     };
 }
@@ -41,6 +43,7 @@ const CHAVE_SIGLAS = "registro-entregas:siglas";
 const CHAVE_SERVICOS_AWS = "registro-entregas:servicos-aws";
 const CHAVE_MICROSSERVICOS = "registro-entregas:microsservicos";
 const CHAVE_PESSOAS = "registro-entregas:pessoas";
+const CHAVE_TAGS = "registro-entregas:tags";
 function carregarLista(chave) {
     try {
         const dados = JSON.parse(localStorage.getItem(chave) ?? "[]");
@@ -55,6 +58,7 @@ const siglasCadastradas = carregarLista(CHAVE_SIGLAS);
 const servicosAwsCadastrados = carregarLista(CHAVE_SERVICOS_AWS);
 const microsservicosCadastrados = carregarLista(CHAVE_MICROSSERVICOS);
 const pessoasCadastradas = carregarLista(CHAVE_PESSOAS);
+const tagsCadastradas = carregarLista(CHAVE_TAGS);
 // Opções novas que aparecem num CSV valem enquanto ele é lido (ver
 // registrosDoCsv em csv.ts). Depois da importação passam a vir dos registros.
 const opcoesDoCsvEmLeitura = {
@@ -63,6 +67,7 @@ const opcoesDoCsvEmLeitura = {
     servicosAws: new Set(),
     microsservicos: new Set(),
     pessoas: new Set(),
+    tags: new Set(),
 };
 // config.ts + cadastradas + as que já aparecem em registros (ex.: vindas de um
 // JSON importado), para nenhum registro ficar com valor fora da lista.
@@ -99,6 +104,11 @@ function microsservicosDisponiveis() {
             ...registros.flatMap((r) => r.microsservicos),
             ...opcoesDoCsvEmLeitura.microsservicos,
         ]),
+    ];
+}
+function tagsDisponiveis() {
+    return [
+        ...new Set([...TAGS, ...tagsCadastradas, ...registros.flatMap((r) => r.tags), ...opcoesDoCsvEmLeitura.tags]),
     ];
 }
 function pessoasDisponiveis() {
@@ -323,19 +333,20 @@ function validar(dados, regrasDoFormulario = true) {
     }
     // Opcional. O CSV não tem essas colunas: lá o vínculo fica null (ver aplicarImportacao).
     // "versão|ponto": o mesmo ponto pode existir em mais de uma versão do PDI (ver pdi.ts).
-    const [pdiVersao = "", pdiPonto = ""] = texto(dados, "pdiPonto").split("|");
-    const pdiIntensidade = texto(dados, "pdiIntensidade");
-    let pdi = null;
-    if (pdiPonto) {
+    // Cada ponto marcado vem como "versão|ponto" (o mesmo ponto pode existir em mais de
+    // uma versão do PDI) e tem a sua intensidade em pdiIntensidade-<versão|ponto> (ver pdi.ts).
+    const pdis = [];
+    for (const valor of dados.getAll("pdiPonto")) {
+        if (typeof valor !== "string" || !valor)
+            continue;
+        const [pdiVersao = "", pdiPonto = ""] = valor.split("|");
+        const pdiIntensidade = texto(dados, `pdiIntensidade-${valor}`);
         if (!PADRAO_PONTO_PDI.test(pdiPonto))
-            erros.pdiPonto = "Ponto do PDI inválido.";
+            erros.pdiPonto ??= "Ponto do PDI inválido.";
         else if (!pertence(INTENSIDADES_PDI, pdiIntensidade))
-            erros.pdiIntensidade = "Escolha a intensidade.";
+            erros.pdiPonto ??= "Escolha a intensidade de cada ponto do PDI marcado.";
         else
-            pdi = { versao: pdiVersao || null, ponto: pdiPonto, intensidade: pdiIntensidade };
-    }
-    else if (pdiIntensidade) {
-        erros.pdiPonto = "Escolha o ponto do PDI (ou deixe a intensidade em branco).";
+            pdis.push({ versao: pdiVersao || null, ponto: pdiPonto, intensidade: pdiIntensidade });
     }
     const siglas = dados
         .getAll("siglas")
@@ -349,6 +360,9 @@ function validar(dados, regrasDoFormulario = true) {
     const microsservicos = dados
         .getAll("microsservicos")
         .filter((m) => typeof m === "string" && pertence(microsservicosDisponiveis(), m));
+    const tags = dados
+        .getAll("tags")
+        .filter((t) => typeof t === "string" && pertence(tagsDisponiveis(), t));
     const pessoas = dados
         .getAll("pessoas")
         .filter((p) => typeof p === "string" && pertence(pessoasDisponiveis(), p));
@@ -372,6 +386,7 @@ function validar(dados, regrasDoFormulario = true) {
             camadas,
             servicosAws,
             microsservicos,
+            tags,
             pessoas,
             dataInicio,
             dataFim,
@@ -381,7 +396,7 @@ function validar(dados, regrasDoFormulario = true) {
             historia,
             gmud,
             git,
-            pdi,
+            pdis,
         },
     };
 }
@@ -408,7 +423,7 @@ const listaCamadas = el("lista-camadas");
 const listaServicosAws = el("lista-servicos-aws");
 const listaMicrosservicos = el("lista-microsservicos");
 const listaPessoas = el("lista-pessoas");
-const secaoGmudTitulo = el("sec-gmud-titulo");
+const listaTags = el("lista-tags");
 const secaoClassificacao = el("sec-classificacao");
 const secaoFuncional = el("sec-funcional");
 const secaoGmud = el("sec-gmud");
@@ -461,6 +476,13 @@ const LISTA_MICROSSERVICOS = {
     cadastradas: microsservicosCadastrados,
     disponiveis: microsservicosDisponiveis,
 };
+const LISTA_TAGS = {
+    lista: listaTags,
+    nome: "tags",
+    chave: CHAVE_TAGS,
+    cadastradas: tagsCadastradas,
+    disponiveis: tagsDisponiveis,
+};
 const LISTA_PESSOAS = {
     lista: listaPessoas,
     nome: "pessoas",
@@ -507,7 +529,7 @@ function preencherSquadsESiglas() {
         listaSquads.append(Object.assign(document.createElement("span"), { className: "dica", textContent: "Nenhuma squad ainda: use “+ Nova squad”." }));
     }
     marcarRadio("squad", squadAtual);
-    for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_PESSOAS])
+    for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_TAGS, LISTA_PESSOAS])
         refazerLista(alvo);
 }
 // Squad já existente (mesmo com outra caixa) só é selecionada, sem duplicar.
@@ -538,6 +560,12 @@ function cadastrarServicoAws(valor) {
     if (!valor)
         return "Informe o serviço AWS.";
     cadastrarNaLista(LISTA_SERVICOS_AWS, valor);
+    return null;
+}
+function cadastrarTag(valor) {
+    if (!valor)
+        return "Informe a tag.";
+    cadastrarNaLista(LISTA_TAGS, valor);
     return null;
 }
 function cadastrarPessoa(valor) {
@@ -631,8 +659,6 @@ function atualizarCamposCondicionais() {
     // A ordem importa: sec-actions fica dentro de sec-git.
     mostrar(secaoGit, houveAlteracaoGit);
     mostrar(secaoActions, houveAlteracaoGit && temGmud);
-    // O nome da GMUD só aparece quando há GMUD informada.
-    mostrar(secaoGmudTitulo, temGmud);
 }
 function exibirErros(erros) {
     for (const alvo of formulario.querySelectorAll("[data-erro]")) {
@@ -641,7 +667,7 @@ function exibirErros(erros) {
 }
 function limparFormulario() {
     formulario.reset();
-    preencherVinculoPdi(null); // pdi.ts: volta para a versão mais recente, sem vínculo
+    preencherVinculoPdi([]); // pdi.ts: versão mais recente aberta, nenhum ponto marcado
     preencherOkrsEntrega([]); // okrs.ts: todos os OKRs fechados, sem escolha
     idEmEdicao = null;
     tituloFormulario.textContent = "Novo registro";
@@ -687,9 +713,10 @@ function iniciarEdicao(registro) {
     marcarCaixas(listaCamadas, registro.camadas);
     marcarCaixas(listaServicosAws, registro.servicosAws);
     marcarCaixas(listaMicrosservicos, registro.microsservicos);
+    marcarCaixas(listaTags, registro.tags);
     marcarCaixas(listaPessoas, registro.pessoas);
     // pdi.ts: versão, ponto e intensidade do registro, mesmo que o ponto já tenha saído do PDI.
-    preencherVinculoPdi(registro.pdi);
+    preencherVinculoPdi(registro.pdis);
     tituloFormulario.textContent = "Editando registro";
     botaoSalvar.textContent = "Salvar alterações";
     botaoCancelar.textContent = "Cancelar edição";
@@ -706,16 +733,53 @@ function aoEnviar(evento) {
         formulario.querySelector("[data-erro]:not(:empty)")?.scrollIntoView({ block: "center" });
         return;
     }
-    if (idEmEdicao) {
-        const id = idEmEdicao;
-        registros = registros.map((r) => (r.id === id ? { id, ...resultado.dados } : r));
-    }
-    else {
-        registros = [...registros, { id: gerarId(), ...resultado.dados }];
-    }
+    const editando = idEmEdicao !== null;
+    const salvo = { id: idEmEdicao ?? gerarId(), ...resultado.dados };
+    registros = editando ? registros.map((r) => (r.id === salvo.id ? salvo : r)) : [...registros, salvo];
     salvarRegistros(registros);
     limparFormulario();
     renderizarTabela();
+    mostrarConfirmacao(salvo, editando);
+}
+// ---------- Confirmação depois de salvar ----------
+const modalConfirmacao = el("modal-confirmacao");
+function linhaConfirmacao(rotulo, valor) {
+    const linha = document.createElement("div");
+    const termo = document.createElement("dt");
+    termo.textContent = rotulo;
+    const definicao = document.createElement("dd");
+    definicao.textContent = valor;
+    linha.append(termo, definicao);
+    return linha;
+}
+// Modal com o resumo do que foi salvo: OK fecha; "Ver nos registros" leva à tabela.
+function mostrarConfirmacao(registro, editado) {
+    const conteudo = document.createElement("div");
+    conteudo.className = "confirmacao";
+    conteudo.style.setProperty("--cor-tipo", CORES_TIPO[registro.tipo]);
+    const selo = document.createElement("span");
+    selo.className = "confirmacao-selo";
+    selo.textContent = "✓";
+    const titulo = document.createElement("h2");
+    titulo.id = "confirmacao-titulo";
+    titulo.textContent = editado ? "Alterações salvas" : "Item adicionado";
+    const assunto = document.createElement("p");
+    assunto.className = "confirmacao-assunto";
+    assunto.textContent = registro.assunto;
+    const resumo = document.createElement("dl");
+    resumo.className = "confirmacao-resumo";
+    resumo.append(linhaConfirmacao("Tipo", registro.tipo), linhaConfirmacao("Release / sprint", rotuloReleaseSprint(registro)), linhaConfirmacao("Squad", registro.squad), linhaConfirmacao("OKRs", registro.okrs.map((o) => (o.kr ? `${o.okr} · ${o.kr}` : o.okr)).join(", ")), linhaConfirmacao("Pontos do PDI", registro.pdis.length > 0 ? String(registro.pdis.length) : "nenhum"));
+    const acoes = document.createElement("div");
+    acoes.className = "acoes-form";
+    const ok = criarBotao("OK", "", () => modalConfirmacao.close());
+    acoes.append(ok, criarBotao("Ver nos registros", "secundario", () => {
+        modalConfirmacao.close();
+        corpoTabela.closest("section")?.scrollIntoView({ behavior: "smooth" });
+    }));
+    conteudo.append(selo, titulo, assunto, resumo, acoes);
+    modalConfirmacao.replaceChildren(conteudo);
+    modalConfirmacao.showModal();
+    ok.focus();
 }
 function remover(registro) {
     if (!confirm(`Remover o registro "${registro.assunto}"?`))
@@ -785,12 +849,13 @@ function criarLinha(registro) {
         bcp,
         gmud ? (gmud.link ? criarLink(gmud.link, rotuloGmud(gmud)) : rotuloGmud(gmud)) : VAZIO,
         okrs,
-        textoDoVinculoPdi(registro.pdi), // pdi.ts
+        textoDoVinculoPdi(registro.pdis), // pdi.ts
         registro.squad,
         registro.siglas.join(", ") || VAZIO,
         registro.camadas.join(", ") || VAZIO,
         registro.servicosAws.join(", ") || VAZIO,
         registro.microsservicos.join(", ") || VAZIO,
+        registro.tags.join(", ") || VAZIO,
         registro.pessoas.join(", ") || VAZIO,
         formatarData(registro.dataInicio),
         formatarData(registro.dataFim),
@@ -830,7 +895,7 @@ function passaNosFiltros(registro) {
 function mostrarTabelaVazia(texto) {
     const linha = document.createElement("tr");
     const celula = document.createElement("td");
-    celula.colSpan = 25;
+    celula.colSpan = 26;
     celula.className = "vazio";
     celula.textContent = texto;
     linha.append(celula);
@@ -890,7 +955,7 @@ async function gerarPaginaPublicada() {
     // Os vínculos com o PDI não vão abertos: seguem cifrados, junto com o PDI,
     // na tag de tagDoPdiPublicado (pdi.ts), que só a senha do coordenador abre.
     // Pessoas envolvidas também ficam fora: só servem para a aba de edição.
-    const semPdi = registros.map((r) => ({ ...r, pdi: null, pessoas: [] }));
+    const semPdi = registros.map((r) => ({ ...r, pdis: [], pessoas: [] }));
     // Mesmo formato do `npm run publicar --json`: "<" escapado para nenhum texto
     // fechar a tag <script> antes da hora.
     const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
@@ -958,7 +1023,7 @@ function errosDoRegistroJson(r, posicao) {
     if (r.camadas !== undefined && (!Array.isArray(r.camadas) || !r.camadas.every((c) => pertence(CAMADAS, c)))) {
         erros.push(`${onde}: camadas deve ser uma lista com: ${lista(CAMADAS)}.`);
     }
-    for (const campo of ["servicosAws", "microsservicos", "pessoas"]) {
+    for (const campo of ["servicosAws", "microsservicos", "tags", "pessoas"]) {
         const valor = r[campo];
         if (valor !== undefined && (!Array.isArray(valor) || !valor.every((v) => typeof v === "string"))) {
             erros.push(`${onde}: ${campo} deve ser uma lista de textos.`);
@@ -980,15 +1045,17 @@ function errosDoRegistroJson(r, posicao) {
             erros.push(`${onde}: grau "${impacto.grau}" inválido. Use: ${lista(GRAUS_IMPACTO)}.`);
         }
     }
-    if (r.pdi != null) {
-        const { ponto, intensidade } = r.pdi;
-        if (r.pdi.versao != null && typeof r.pdi.versao !== "string")
-            erros.push(`${onde}: pdi.versao deve ser texto.`);
+    if (r.pdis !== undefined && !Array.isArray(r.pdis))
+        erros.push(`${onde}: pdis deve ser uma lista.`);
+    for (const vinculo of [...(Array.isArray(r.pdis) ? r.pdis : []), ...(r.pdi ? [r.pdi] : [])]) {
+        const { ponto, intensidade, versao } = vinculo;
+        if (versao != null && typeof versao !== "string")
+            erros.push(`${onde}: versao do PDI deve ser texto.`);
         if (typeof ponto !== "string" || !PADRAO_PONTO_PDI.test(ponto)) {
-            erros.push(`${onde}: pdi.ponto deve ser "gap_<id>" ou "exp_<id>".`);
+            erros.push(`${onde}: ponto do PDI deve ser "gap_<id>" ou "exp_<id>".`);
         }
         if (!pertence(INTENSIDADES_PDI, intensidade)) {
-            erros.push(`${onde}: pdi.intensidade "${intensidade}" inválida. Use: ${lista(INTENSIDADES_PDI)}.`);
+            erros.push(`${onde}: intensidade "${intensidade}" inválida. Use: ${lista(INTENSIDADES_PDI)}.`);
         }
     }
     return erros;
@@ -1049,10 +1116,11 @@ function aplicarImportacao(importados) {
             return r;
         return {
             ...r,
-            pdi: r.pdi ?? atual.pdi,
+            pdis: r.pdis.length > 0 ? r.pdis : atual.pdis,
             camadas: r.camadas.length > 0 ? r.camadas : atual.camadas,
             servicosAws: r.servicosAws.length > 0 ? r.servicosAws : atual.servicosAws,
             microsservicos: r.microsservicos.length > 0 ? r.microsservicos : atual.microsservicos,
+            tags: r.tags.length > 0 ? r.tags : atual.tags,
             pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
             // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
             okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
@@ -1090,6 +1158,7 @@ criarCadastroRapido(el("nova-squad"), "Nova squad", cadastrarSquad);
 criarCadastroRapido(el("nova-sigla"), "Nova sigla", cadastrarSigla);
 criarCadastroRapido(el("novo-servico-aws"), "Novo serviço AWS", cadastrarServicoAws);
 criarCadastroRapido(el("novo-microsservico"), "Novo microsserviço", cadastrarMicrosservico);
+criarCadastroRapido(el("nova-tag"), "Nova tag", cadastrarTag);
 criarCadastroRapido(el("nova-pessoa"), "Nova pessoa", cadastrarPessoa);
 listaCamadas.append(...CAMADAS.map((camada) => criarEscolha("checkbox", "camadas", camada, camada)));
 // A release segue o trimestre da data de fim: escolher a data já preenche a release.
@@ -1099,6 +1168,11 @@ el("dataFim").addEventListener("change", (evento) => {
         campoRelease.value = releaseDaData(data);
 });
 formulario.addEventListener("submit", aoEnviar);
+// Clicar no fundo escurecido fecha a confirmação (Esc já fecha nativamente).
+modalConfirmacao.addEventListener("click", (evento) => {
+    if (evento.target === modalConfirmacao)
+        modalConfirmacao.close();
+});
 formulario.addEventListener("input", atualizarCamposCondicionais);
 botaoCancelar.addEventListener("click", limparFormulario);
 filtroRelease.addEventListener("change", renderizarTabela);

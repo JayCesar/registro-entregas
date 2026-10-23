@@ -230,6 +230,9 @@
     </div>
 
     <div class="painel" id="painel-edicao" hidden>
+    <!-- Confirmação depois de adicionar ou salvar um registro (ver mostrarConfirmacao em app.ts). -->
+    <dialog class="modal modal-confirmacao" id="modal-confirmacao" aria-labelledby="confirmacao-titulo"></dialog>
+
     <section class="cartao perfil-edicao">
       <div>
         <h2>Foto do perfil</h2>
@@ -288,19 +291,15 @@
           </fieldset>
         </div>
 
-        <!-- Opcional. Ponto (gap ou experiência) de uma versão do PDI e intensidade,
-             como radios criados por pdi.ts. -->
+        <!-- Opcional. Pontos (gaps e experiências) do PDI, vários por entrega, cada um com
+             a sua intensidade: caixas e radios criados por pdi.ts. -->
         <div class="grade">
           <fieldset class="campo largo vinculo-pdi">
-            <legend>Ponto do PDI que a entrega move <span class="dica">(opcional)</span></legend>
-            <!-- "Sem vínculo" e um bloco recolhível por versão do PDI (ver pdi.ts). -->
+            <legend>Pontos do PDI que a entrega move <span class="dica">(opcional)</span></legend>
+            <span class="dica">Marque um ou mais pontos e, em cada um, escolha a intensidade: baixo (tocou no ponto), médio (avançou) ou forte (foi decisiva).</span>
+            <!-- Um bloco recolhível por versão do PDI (ver pdi.ts). -->
             <div class="vinculo-pdi-escolha" id="pdi-vinculo-escolha"></div>
             <small class="erro" data-erro="pdiPonto"></small>
-            <div class="vinculo-pdi-intensidade" id="pdi-intensidade-bloco" hidden>
-              <span class="dica">Com que intensidade a entrega move este ponto do PDI?</span>
-              <div class="escolhas" id="pdi-intensidades-escolha"></div>
-              <small class="erro" data-erro="pdiIntensidade"></small>
-            </div>
           </fieldset>
         </div>
 
@@ -387,6 +386,12 @@
           </fieldset>
 
           <fieldset class="campo largo">
+            <legend>Tags <span class="dica">(livres: tecnologia, tema… ex.: Angular, React)</span></legend>
+            <div class="escolhas" id="lista-tags"></div>
+            <div id="nova-tag"></div>
+          </fieldset>
+
+          <fieldset class="campo largo">
             <legend>Pessoas envolvidas <span class="dica">(só aparece aqui na edição)</span></legend>
             <div class="escolhas" id="lista-pessoas"></div>
             <div id="nova-pessoa"></div>
@@ -407,15 +412,15 @@
             <small class="erro" data-erro="gmudLink"></small>
           </div>
 
-          <!-- Só quando há número de GMUD -->
-          <div class="gmud-extra" id="sec-gmud-titulo" hidden>
+          <!-- Nome e evidências: sempre à vista com a GMUD; as evidências são obrigatórias quando há número. -->
+          <div class="gmud-extra" id="sec-gmud-titulo">
             <div class="campo">
               <label for="gmudTitulo">Nome da GMUD</label>
               <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
             </div>
 
             <div class="campo">
-              <label for="gmudEvidencias">Link das evidências *</label>
+              <label for="gmudEvidencias">Link das evidências <span class="dica">(obrigatório com número de GMUD)</span></label>
               <input type="url" id="gmudEvidencias" name="gmudEvidencias" placeholder="https://... (pasta ou documento com as evidências)">
               <small class="erro" data-erro="gmudEvidencias"></small>
             </div>
@@ -514,6 +519,7 @@
               <th>Camadas</th>
               <th>Serviços AWS</th>
               <th>Microsserviços</th>
+              <th>Tags</th>
               <th>Pessoas</th>
               <th>Início</th>
               <th>Fim</th>

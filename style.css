@@ -2561,9 +2561,11 @@ button.aba-texto[aria-pressed="true"] {
   gap: 20px;
 }
 
+/* auto-fill (e não auto-fit): com poucos OKRs, o cartão mantém a largura de um
+   cartão em vez de esticar na linha toda. */
 .okr-cartoes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 
@@ -3257,6 +3259,26 @@ button.modal-fechar {
   content: none;
 }
 
+/* Item de ponto do PDI: o cartão (caixa de marcar) e, marcado, as intensidades dele. */
+.ponto-item {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.ponto-intensidades {
+  gap: 6px;
+  padding: 0 0 2px 8px;
+}
+
+.ponto-intensidades .escolha > span.intensidade-escolha {
+  display: inline-flex;
+  min-width: 0;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  border-radius: 999px;
+}
+
 /* Intensidade: três pílulas largas com o nome e o que significa. */
 .intensidade-escolha {
   display: grid;
@@ -3390,6 +3412,11 @@ button.modal-fechar {
   border-style: dashed;
 }
 
+.etiqueta-tag {
+  color: var(--destaque);
+  border-color: color-mix(in srgb, var(--destaque) 45%, transparent);
+}
+
 .etiqueta-aws {
   color: var(--tipo-discovery);
   border-color: color-mix(in srgb, var(--tipo-discovery) 45%, transparent);
@@ -3407,6 +3434,82 @@ button.modal-fechar {
   .gmud-extra {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* ---------- Confirmação depois de salvar um registro ---------- */
+
+.modal.modal-confirmacao {
+  width: min(460px, calc(100vw - 32px));
+  overflow: visible;
+}
+
+.confirmacao {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px 28px 24px;
+  text-align: center;
+  background:
+    radial-gradient(360px 200px at 50% 0%, color-mix(in srgb, var(--cor-tipo) 18%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-top: 4px solid var(--cor-tipo);
+  border-radius: 24px;
+}
+
+.confirmacao-selo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-radius: 50%;
+}
+
+.confirmacao h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.confirmacao-assunto {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.confirmacao-resumo {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--fundo);
+  border-radius: 14px;
+}
+
+.confirmacao-resumo > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.confirmacao-resumo dt {
+  color: var(--texto-suave);
+}
+
+.confirmacao-resumo dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.confirmacao .acoes-form {
+  justify-content: center;
 }
 
 /* ---------- Busca da tabela de registros ---------- */
