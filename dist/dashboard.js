@@ -903,7 +903,7 @@ function criarCartaoEntrega(registro) {
     const cartao = criarElemento("article", "entrega");
     cartao.style.setProperty("--cor-tipo", CORES_TIPO[registro.tipo]);
     const chips = criarElemento("div", "entrega-chips");
-    chips.append(criarElemento("span", "etiqueta", rotuloReleaseSprint(registro)), criarElemento("span", "etiqueta", registro.squad), ...registro.okrs.map(criarChipOkr), ...registro.camadas.map((camada) => criarElemento("span", "etiqueta etiqueta-camada", camada)), ...registro.servicosAws.map((servico) => criarElemento("span", "etiqueta etiqueta-aws", servico)));
+    chips.append(criarElemento("span", "etiqueta", rotuloReleaseSprint(registro)), criarElemento("span", "etiqueta", registro.squad), ...registro.okrs.map(criarChipOkr), ...registro.camadas.map((camada) => criarElemento("span", "etiqueta etiqueta-camada", camada)), ...registro.servicosAws.map((servico) => criarElemento("span", "etiqueta etiqueta-aws", servico)), ...registro.tags.map((tag) => criarElemento("span", "etiqueta etiqueta-tag", `#${tag}`)));
     const rodape = criarElemento("div", "entrega-rodape");
     rodape.append(criarElemento("span", "dica", `Lead time: ${plural(leadTimeEmDias(registro), "dia", "dias")}`), criarBotao("Ver detalhes", "link", () => abrirDetalhesEntrega(registro)));
     const info = criarElemento("div", "entrega-info");
@@ -961,6 +961,8 @@ function abrirDetalhesEntrega(registro) {
         adicionarDetalhe(detalhes, "Serviços AWS", registro.servicosAws.join(", "));
     if (registro.microsservicos.length > 0)
         adicionarDetalhe(detalhes, "Microsserviços", registro.microsservicos.join(", "));
+    if (registro.tags.length > 0)
+        adicionarDetalhe(detalhes, "Tags", registro.tags.join(", "));
     if (historia) {
         adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
         if (historia.funcional)
@@ -1013,6 +1015,7 @@ function textoPesquisavel(registro) {
         ...registro.camadas,
         ...registro.servicosAws,
         ...registro.microsservicos,
+        ...registro.tags,
         historia?.funcional ? historia.bcp : "",
         gmud?.nome ?? "",
         gmud?.titulo ?? "",

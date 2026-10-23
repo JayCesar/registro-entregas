@@ -2650,9 +2650,11 @@ button.aba-texto[aria-pressed="true"] {
   gap: 20px;
 }
 
+/* auto-fill (e não auto-fit): com poucos OKRs, o cartão mantém a largura de um
+   cartão em vez de esticar na linha toda. */
 .okr-cartoes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 
@@ -3346,6 +3348,26 @@ button.modal-fechar {
   content: none;
 }
 
+/* Item de ponto do PDI: o cartão (caixa de marcar) e, marcado, as intensidades dele. */
+.ponto-item {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.ponto-intensidades {
+  gap: 6px;
+  padding: 0 0 2px 8px;
+}
+
+.ponto-intensidades .escolha > span.intensidade-escolha {
+  display: inline-flex;
+  min-width: 0;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  border-radius: 999px;
+}
+
 /* Intensidade: três pílulas largas com o nome e o que significa. */
 .intensidade-escolha {
   display: grid;
@@ -3479,6 +3501,11 @@ button.modal-fechar {
   border-style: dashed;
 }
 
+.etiqueta-tag {
+  color: var(--destaque);
+  border-color: color-mix(in srgb, var(--destaque) 45%, transparent);
+}
+
 .etiqueta-aws {
   color: var(--tipo-discovery);
   border-color: color-mix(in srgb, var(--tipo-discovery) 45%, transparent);
@@ -3496,6 +3523,82 @@ button.modal-fechar {
   .gmud-extra {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* ---------- Confirmação depois de salvar um registro ---------- */
+
+.modal.modal-confirmacao {
+  width: min(460px, calc(100vw - 32px));
+  overflow: visible;
+}
+
+.confirmacao {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px 28px 24px;
+  text-align: center;
+  background:
+    radial-gradient(360px 200px at 50% 0%, color-mix(in srgb, var(--cor-tipo) 18%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-top: 4px solid var(--cor-tipo);
+  border-radius: 24px;
+}
+
+.confirmacao-selo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-radius: 50%;
+}
+
+.confirmacao h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.confirmacao-assunto {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.confirmacao-resumo {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  margin: 8px 0 4px;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--fundo);
+  border-radius: 14px;
+}
+
+.confirmacao-resumo > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.confirmacao-resumo dt {
+  color: var(--texto-suave);
+}
+
+.confirmacao-resumo dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.confirmacao .acoes-form {
+  justify-content: center;
 }
 
 /* ---------- Busca da tabela de registros ---------- */
@@ -4334,6 +4437,9 @@ body[data-publicado] #btn-bloquear {
     </div>
 
     <div class="painel" id="painel-edicao" hidden>
+    <!-- Confirmação depois de adicionar ou salvar um registro (ver mostrarConfirmacao em app.ts). -->
+    <dialog class="modal modal-confirmacao" id="modal-confirmacao" aria-labelledby="confirmacao-titulo"></dialog>
+
     <section class="cartao perfil-edicao">
       <div>
         <h2>Foto do perfil</h2>
@@ -4392,19 +4498,15 @@ body[data-publicado] #btn-bloquear {
           </fieldset>
         </div>
 
-        <!-- Opcional. Ponto (gap ou experiência) de uma versão do PDI e intensidade,
-             como radios criados por pdi.ts. -->
+        <!-- Opcional. Pontos (gaps e experiências) do PDI, vários por entrega, cada um com
+             a sua intensidade: caixas e radios criados por pdi.ts. -->
         <div class="grade">
           <fieldset class="campo largo vinculo-pdi">
-            <legend>Ponto do PDI que a entrega move <span class="dica">(opcional)</span></legend>
-            <!-- "Sem vínculo" e um bloco recolhível por versão do PDI (ver pdi.ts). -->
+            <legend>Pontos do PDI que a entrega move <span class="dica">(opcional)</span></legend>
+            <span class="dica">Marque um ou mais pontos e, em cada um, escolha a intensidade: baixo (tocou no ponto), médio (avançou) ou forte (foi decisiva).</span>
+            <!-- Um bloco recolhível por versão do PDI (ver pdi.ts). -->
             <div class="vinculo-pdi-escolha" id="pdi-vinculo-escolha"></div>
             <small class="erro" data-erro="pdiPonto"></small>
-            <div class="vinculo-pdi-intensidade" id="pdi-intensidade-bloco" hidden>
-              <span class="dica">Com que intensidade a entrega move este ponto do PDI?</span>
-              <div class="escolhas" id="pdi-intensidades-escolha"></div>
-              <small class="erro" data-erro="pdiIntensidade"></small>
-            </div>
           </fieldset>
         </div>
 
@@ -4491,6 +4593,12 @@ body[data-publicado] #btn-bloquear {
           </fieldset>
 
           <fieldset class="campo largo">
+            <legend>Tags <span class="dica">(livres: tecnologia, tema… ex.: Angular, React)</span></legend>
+            <div class="escolhas" id="lista-tags"></div>
+            <div id="nova-tag"></div>
+          </fieldset>
+
+          <fieldset class="campo largo">
             <legend>Pessoas envolvidas <span class="dica">(só aparece aqui na edição)</span></legend>
             <div class="escolhas" id="lista-pessoas"></div>
             <div id="nova-pessoa"></div>
@@ -4511,15 +4619,15 @@ body[data-publicado] #btn-bloquear {
             <small class="erro" data-erro="gmudLink"></small>
           </div>
 
-          <!-- Só quando há número de GMUD -->
-          <div class="gmud-extra" id="sec-gmud-titulo" hidden>
+          <!-- Nome e evidências: sempre à vista com a GMUD; as evidências são obrigatórias quando há número. -->
+          <div class="gmud-extra" id="sec-gmud-titulo">
             <div class="campo">
               <label for="gmudTitulo">Nome da GMUD</label>
               <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
             </div>
 
             <div class="campo">
-              <label for="gmudEvidencias">Link das evidências *</label>
+              <label for="gmudEvidencias">Link das evidências <span class="dica">(obrigatório com número de GMUD)</span></label>
               <input type="url" id="gmudEvidencias" name="gmudEvidencias" placeholder="https://... (pasta ou documento com as evidências)">
               <small class="erro" data-erro="gmudEvidencias"></small>
             </div>
@@ -4618,6 +4726,7 @@ body[data-publicado] #btn-bloquear {
               <th>Camadas</th>
               <th>Serviços AWS</th>
               <th>Microsserviços</th>
+              <th>Tags</th>
               <th>Pessoas</th>
               <th>Início</th>
               <th>Fim</th>
@@ -4751,6 +4860,8 @@ const SERVICOS_AWS = [
 ];
 // Microsserviços criados ou alterados: começa vazio e cresce pelo formulário.
 const MICROSSERVICOS = [];
+// Tags livres da entrega (ex.: Angular, React): começa vazio e cresce pelo formulário.
+const TAGS = [];
 // Intensidade com que uma entrega move um ponto do PDI, da menor para a maior.
 const INTENSIDADES_PDI = ["baixo", "médio", "forte"];
 // Chave da seção PDI do dashboard, liberada só com a senha do coordenador.
@@ -4785,7 +4896,8 @@ const PADRAO_PONTO_PDI = /^(gap|exp)_[a-z0-9]+$/;
 // ---------- Persistência ----------
 const CHAVE_STORAGE = "registro-entregas:v1";
 function migrarRegistro(salvo) {
-    const { okr, okrs, ...resto } = salvo;
+    // `pdi` (formato antigo, um ponto só) vira a lista `pdis` e não fica no registro.
+    const { okr, okrs, pdi, ...resto } = salvo;
     return {
         ...resto,
         okrs: Array.isArray(okrs) ? okrs : okr ? [{ okr, motivo: "", grau: null }] : [],
@@ -4795,10 +4907,11 @@ function migrarRegistro(salvo) {
         historia: salvo.historia ?? null,
         gmud: salvo.gmud ?? null,
         git: salvo.git ?? null,
-        pdi: salvo.pdi ?? null,
+        pdis: Array.isArray(salvo.pdis) ? salvo.pdis : pdi ? [pdi] : [],
         camadas: salvo.camadas ?? [],
         servicosAws: salvo.servicosAws ?? [],
         microsservicos: salvo.microsservicos ?? [],
+        tags: salvo.tags ?? [],
         pessoas: salvo.pessoas ?? [],
     };
 }
@@ -4822,6 +4935,7 @@ const CHAVE_SIGLAS = "registro-entregas:siglas";
 const CHAVE_SERVICOS_AWS = "registro-entregas:servicos-aws";
 const CHAVE_MICROSSERVICOS = "registro-entregas:microsservicos";
 const CHAVE_PESSOAS = "registro-entregas:pessoas";
+const CHAVE_TAGS = "registro-entregas:tags";
 function carregarLista(chave) {
     try {
         const dados = JSON.parse(localStorage.getItem(chave) ?? "[]");
@@ -4836,6 +4950,7 @@ const siglasCadastradas = carregarLista(CHAVE_SIGLAS);
 const servicosAwsCadastrados = carregarLista(CHAVE_SERVICOS_AWS);
 const microsservicosCadastrados = carregarLista(CHAVE_MICROSSERVICOS);
 const pessoasCadastradas = carregarLista(CHAVE_PESSOAS);
+const tagsCadastradas = carregarLista(CHAVE_TAGS);
 // Opções novas que aparecem num CSV valem enquanto ele é lido (ver
 // registrosDoCsv em csv.ts). Depois da importação passam a vir dos registros.
 const opcoesDoCsvEmLeitura = {
@@ -4844,6 +4959,7 @@ const opcoesDoCsvEmLeitura = {
     servicosAws: new Set(),
     microsservicos: new Set(),
     pessoas: new Set(),
+    tags: new Set(),
 };
 // config.ts + cadastradas + as que já aparecem em registros (ex.: vindas de um
 // JSON importado), para nenhum registro ficar com valor fora da lista.
@@ -4880,6 +4996,11 @@ function microsservicosDisponiveis() {
             ...registros.flatMap((r) => r.microsservicos),
             ...opcoesDoCsvEmLeitura.microsservicos,
         ]),
+    ];
+}
+function tagsDisponiveis() {
+    return [
+        ...new Set([...TAGS, ...tagsCadastradas, ...registros.flatMap((r) => r.tags), ...opcoesDoCsvEmLeitura.tags]),
     ];
 }
 function pessoasDisponiveis() {
@@ -5104,19 +5225,20 @@ function validar(dados, regrasDoFormulario = true) {
     }
     // Opcional. O CSV não tem essas colunas: lá o vínculo fica null (ver aplicarImportacao).
     // "versão|ponto": o mesmo ponto pode existir em mais de uma versão do PDI (ver pdi.ts).
-    const [pdiVersao = "", pdiPonto = ""] = texto(dados, "pdiPonto").split("|");
-    const pdiIntensidade = texto(dados, "pdiIntensidade");
-    let pdi = null;
-    if (pdiPonto) {
+    // Cada ponto marcado vem como "versão|ponto" (o mesmo ponto pode existir em mais de
+    // uma versão do PDI) e tem a sua intensidade em pdiIntensidade-<versão|ponto> (ver pdi.ts).
+    const pdis = [];
+    for (const valor of dados.getAll("pdiPonto")) {
+        if (typeof valor !== "string" || !valor)
+            continue;
+        const [pdiVersao = "", pdiPonto = ""] = valor.split("|");
+        const pdiIntensidade = texto(dados, `pdiIntensidade-${valor}`);
         if (!PADRAO_PONTO_PDI.test(pdiPonto))
-            erros.pdiPonto = "Ponto do PDI inválido.";
+            erros.pdiPonto ??= "Ponto do PDI inválido.";
         else if (!pertence(INTENSIDADES_PDI, pdiIntensidade))
-            erros.pdiIntensidade = "Escolha a intensidade.";
+            erros.pdiPonto ??= "Escolha a intensidade de cada ponto do PDI marcado.";
         else
-            pdi = { versao: pdiVersao || null, ponto: pdiPonto, intensidade: pdiIntensidade };
-    }
-    else if (pdiIntensidade) {
-        erros.pdiPonto = "Escolha o ponto do PDI (ou deixe a intensidade em branco).";
+            pdis.push({ versao: pdiVersao || null, ponto: pdiPonto, intensidade: pdiIntensidade });
     }
     const siglas = dados
         .getAll("siglas")
@@ -5130,6 +5252,9 @@ function validar(dados, regrasDoFormulario = true) {
     const microsservicos = dados
         .getAll("microsservicos")
         .filter((m) => typeof m === "string" && pertence(microsservicosDisponiveis(), m));
+    const tags = dados
+        .getAll("tags")
+        .filter((t) => typeof t === "string" && pertence(tagsDisponiveis(), t));
     const pessoas = dados
         .getAll("pessoas")
         .filter((p) => typeof p === "string" && pertence(pessoasDisponiveis(), p));
@@ -5153,6 +5278,7 @@ function validar(dados, regrasDoFormulario = true) {
             camadas,
             servicosAws,
             microsservicos,
+            tags,
             pessoas,
             dataInicio,
             dataFim,
@@ -5162,7 +5288,7 @@ function validar(dados, regrasDoFormulario = true) {
             historia,
             gmud,
             git,
-            pdi,
+            pdis,
         },
     };
 }
@@ -5189,7 +5315,7 @@ const listaCamadas = el("lista-camadas");
 const listaServicosAws = el("lista-servicos-aws");
 const listaMicrosservicos = el("lista-microsservicos");
 const listaPessoas = el("lista-pessoas");
-const secaoGmudTitulo = el("sec-gmud-titulo");
+const listaTags = el("lista-tags");
 const secaoClassificacao = el("sec-classificacao");
 const secaoFuncional = el("sec-funcional");
 const secaoGmud = el("sec-gmud");
@@ -5242,6 +5368,13 @@ const LISTA_MICROSSERVICOS = {
     cadastradas: microsservicosCadastrados,
     disponiveis: microsservicosDisponiveis,
 };
+const LISTA_TAGS = {
+    lista: listaTags,
+    nome: "tags",
+    chave: CHAVE_TAGS,
+    cadastradas: tagsCadastradas,
+    disponiveis: tagsDisponiveis,
+};
 const LISTA_PESSOAS = {
     lista: listaPessoas,
     nome: "pessoas",
@@ -5288,7 +5421,7 @@ function preencherSquadsESiglas() {
         listaSquads.append(Object.assign(document.createElement("span"), { className: "dica", textContent: "Nenhuma squad ainda: use “+ Nova squad”." }));
     }
     marcarRadio("squad", squadAtual);
-    for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_PESSOAS])
+    for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_TAGS, LISTA_PESSOAS])
         refazerLista(alvo);
 }
 // Squad já existente (mesmo com outra caixa) só é selecionada, sem duplicar.
@@ -5319,6 +5452,12 @@ function cadastrarServicoAws(valor) {
     if (!valor)
         return "Informe o serviço AWS.";
     cadastrarNaLista(LISTA_SERVICOS_AWS, valor);
+    return null;
+}
+function cadastrarTag(valor) {
+    if (!valor)
+        return "Informe a tag.";
+    cadastrarNaLista(LISTA_TAGS, valor);
     return null;
 }
 function cadastrarPessoa(valor) {
@@ -5412,8 +5551,6 @@ function atualizarCamposCondicionais() {
     // A ordem importa: sec-actions fica dentro de sec-git.
     mostrar(secaoGit, houveAlteracaoGit);
     mostrar(secaoActions, houveAlteracaoGit && temGmud);
-    // O nome da GMUD só aparece quando há GMUD informada.
-    mostrar(secaoGmudTitulo, temGmud);
 }
 function exibirErros(erros) {
     for (const alvo of formulario.querySelectorAll("[data-erro]")) {
@@ -5422,7 +5559,7 @@ function exibirErros(erros) {
 }
 function limparFormulario() {
     formulario.reset();
-    preencherVinculoPdi(null); // pdi.ts: volta para a versão mais recente, sem vínculo
+    preencherVinculoPdi([]); // pdi.ts: versão mais recente aberta, nenhum ponto marcado
     preencherOkrsEntrega([]); // okrs.ts: todos os OKRs fechados, sem escolha
     idEmEdicao = null;
     tituloFormulario.textContent = "Novo registro";
@@ -5468,9 +5605,10 @@ function iniciarEdicao(registro) {
     marcarCaixas(listaCamadas, registro.camadas);
     marcarCaixas(listaServicosAws, registro.servicosAws);
     marcarCaixas(listaMicrosservicos, registro.microsservicos);
+    marcarCaixas(listaTags, registro.tags);
     marcarCaixas(listaPessoas, registro.pessoas);
     // pdi.ts: versão, ponto e intensidade do registro, mesmo que o ponto já tenha saído do PDI.
-    preencherVinculoPdi(registro.pdi);
+    preencherVinculoPdi(registro.pdis);
     tituloFormulario.textContent = "Editando registro";
     botaoSalvar.textContent = "Salvar alterações";
     botaoCancelar.textContent = "Cancelar edição";
@@ -5487,16 +5625,53 @@ function aoEnviar(evento) {
         formulario.querySelector("[data-erro]:not(:empty)")?.scrollIntoView({ block: "center" });
         return;
     }
-    if (idEmEdicao) {
-        const id = idEmEdicao;
-        registros = registros.map((r) => (r.id === id ? { id, ...resultado.dados } : r));
-    }
-    else {
-        registros = [...registros, { id: gerarId(), ...resultado.dados }];
-    }
+    const editando = idEmEdicao !== null;
+    const salvo = { id: idEmEdicao ?? gerarId(), ...resultado.dados };
+    registros = editando ? registros.map((r) => (r.id === salvo.id ? salvo : r)) : [...registros, salvo];
     salvarRegistros(registros);
     limparFormulario();
     renderizarTabela();
+    mostrarConfirmacao(salvo, editando);
+}
+// ---------- Confirmação depois de salvar ----------
+const modalConfirmacao = el("modal-confirmacao");
+function linhaConfirmacao(rotulo, valor) {
+    const linha = document.createElement("div");
+    const termo = document.createElement("dt");
+    termo.textContent = rotulo;
+    const definicao = document.createElement("dd");
+    definicao.textContent = valor;
+    linha.append(termo, definicao);
+    return linha;
+}
+// Modal com o resumo do que foi salvo: OK fecha; "Ver nos registros" leva à tabela.
+function mostrarConfirmacao(registro, editado) {
+    const conteudo = document.createElement("div");
+    conteudo.className = "confirmacao";
+    conteudo.style.setProperty("--cor-tipo", CORES_TIPO[registro.tipo]);
+    const selo = document.createElement("span");
+    selo.className = "confirmacao-selo";
+    selo.textContent = "✓";
+    const titulo = document.createElement("h2");
+    titulo.id = "confirmacao-titulo";
+    titulo.textContent = editado ? "Alterações salvas" : "Item adicionado";
+    const assunto = document.createElement("p");
+    assunto.className = "confirmacao-assunto";
+    assunto.textContent = registro.assunto;
+    const resumo = document.createElement("dl");
+    resumo.className = "confirmacao-resumo";
+    resumo.append(linhaConfirmacao("Tipo", registro.tipo), linhaConfirmacao("Release / sprint", rotuloReleaseSprint(registro)), linhaConfirmacao("Squad", registro.squad), linhaConfirmacao("OKRs", registro.okrs.map((o) => (o.kr ? `${o.okr} · ${o.kr}` : o.okr)).join(", ")), linhaConfirmacao("Pontos do PDI", registro.pdis.length > 0 ? String(registro.pdis.length) : "nenhum"));
+    const acoes = document.createElement("div");
+    acoes.className = "acoes-form";
+    const ok = criarBotao("OK", "", () => modalConfirmacao.close());
+    acoes.append(ok, criarBotao("Ver nos registros", "secundario", () => {
+        modalConfirmacao.close();
+        corpoTabela.closest("section")?.scrollIntoView({ behavior: "smooth" });
+    }));
+    conteudo.append(selo, titulo, assunto, resumo, acoes);
+    modalConfirmacao.replaceChildren(conteudo);
+    modalConfirmacao.showModal();
+    ok.focus();
 }
 function remover(registro) {
     if (!confirm(`Remover o registro "${registro.assunto}"?`))
@@ -5566,12 +5741,13 @@ function criarLinha(registro) {
         bcp,
         gmud ? (gmud.link ? criarLink(gmud.link, rotuloGmud(gmud)) : rotuloGmud(gmud)) : VAZIO,
         okrs,
-        textoDoVinculoPdi(registro.pdi), // pdi.ts
+        textoDoVinculoPdi(registro.pdis), // pdi.ts
         registro.squad,
         registro.siglas.join(", ") || VAZIO,
         registro.camadas.join(", ") || VAZIO,
         registro.servicosAws.join(", ") || VAZIO,
         registro.microsservicos.join(", ") || VAZIO,
+        registro.tags.join(", ") || VAZIO,
         registro.pessoas.join(", ") || VAZIO,
         formatarData(registro.dataInicio),
         formatarData(registro.dataFim),
@@ -5611,7 +5787,7 @@ function passaNosFiltros(registro) {
 function mostrarTabelaVazia(texto) {
     const linha = document.createElement("tr");
     const celula = document.createElement("td");
-    celula.colSpan = 25;
+    celula.colSpan = 26;
     celula.className = "vazio";
     celula.textContent = texto;
     linha.append(celula);
@@ -5671,7 +5847,7 @@ async function gerarPaginaPublicada() {
     // Os vínculos com o PDI não vão abertos: seguem cifrados, junto com o PDI,
     // na tag de tagDoPdiPublicado (pdi.ts), que só a senha do coordenador abre.
     // Pessoas envolvidas também ficam fora: só servem para a aba de edição.
-    const semPdi = registros.map((r) => ({ ...r, pdi: null, pessoas: [] }));
+    const semPdi = registros.map((r) => ({ ...r, pdis: [], pessoas: [] }));
     // Mesmo formato do `npm run publicar --json`: "<" escapado para nenhum texto
     // fechar a tag <script> antes da hora.
     const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
@@ -5739,7 +5915,7 @@ function errosDoRegistroJson(r, posicao) {
     if (r.camadas !== undefined && (!Array.isArray(r.camadas) || !r.camadas.every((c) => pertence(CAMADAS, c)))) {
         erros.push(`${onde}: camadas deve ser uma lista com: ${lista(CAMADAS)}.`);
     }
-    for (const campo of ["servicosAws", "microsservicos", "pessoas"]) {
+    for (const campo of ["servicosAws", "microsservicos", "tags", "pessoas"]) {
         const valor = r[campo];
         if (valor !== undefined && (!Array.isArray(valor) || !valor.every((v) => typeof v === "string"))) {
             erros.push(`${onde}: ${campo} deve ser uma lista de textos.`);
@@ -5761,15 +5937,17 @@ function errosDoRegistroJson(r, posicao) {
             erros.push(`${onde}: grau "${impacto.grau}" inválido. Use: ${lista(GRAUS_IMPACTO)}.`);
         }
     }
-    if (r.pdi != null) {
-        const { ponto, intensidade } = r.pdi;
-        if (r.pdi.versao != null && typeof r.pdi.versao !== "string")
-            erros.push(`${onde}: pdi.versao deve ser texto.`);
+    if (r.pdis !== undefined && !Array.isArray(r.pdis))
+        erros.push(`${onde}: pdis deve ser uma lista.`);
+    for (const vinculo of [...(Array.isArray(r.pdis) ? r.pdis : []), ...(r.pdi ? [r.pdi] : [])]) {
+        const { ponto, intensidade, versao } = vinculo;
+        if (versao != null && typeof versao !== "string")
+            erros.push(`${onde}: versao do PDI deve ser texto.`);
         if (typeof ponto !== "string" || !PADRAO_PONTO_PDI.test(ponto)) {
-            erros.push(`${onde}: pdi.ponto deve ser "gap_<id>" ou "exp_<id>".`);
+            erros.push(`${onde}: ponto do PDI deve ser "gap_<id>" ou "exp_<id>".`);
         }
         if (!pertence(INTENSIDADES_PDI, intensidade)) {
-            erros.push(`${onde}: pdi.intensidade "${intensidade}" inválida. Use: ${lista(INTENSIDADES_PDI)}.`);
+            erros.push(`${onde}: intensidade "${intensidade}" inválida. Use: ${lista(INTENSIDADES_PDI)}.`);
         }
     }
     return erros;
@@ -5830,10 +6008,11 @@ function aplicarImportacao(importados) {
             return r;
         return {
             ...r,
-            pdi: r.pdi ?? atual.pdi,
+            pdis: r.pdis.length > 0 ? r.pdis : atual.pdis,
             camadas: r.camadas.length > 0 ? r.camadas : atual.camadas,
             servicosAws: r.servicosAws.length > 0 ? r.servicosAws : atual.servicosAws,
             microsservicos: r.microsservicos.length > 0 ? r.microsservicos : atual.microsservicos,
+            tags: r.tags.length > 0 ? r.tags : atual.tags,
             pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
             // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
             okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
@@ -5871,6 +6050,7 @@ criarCadastroRapido(el("nova-squad"), "Nova squad", cadastrarSquad);
 criarCadastroRapido(el("nova-sigla"), "Nova sigla", cadastrarSigla);
 criarCadastroRapido(el("novo-servico-aws"), "Novo serviço AWS", cadastrarServicoAws);
 criarCadastroRapido(el("novo-microsservico"), "Novo microsserviço", cadastrarMicrosservico);
+criarCadastroRapido(el("nova-tag"), "Nova tag", cadastrarTag);
 criarCadastroRapido(el("nova-pessoa"), "Nova pessoa", cadastrarPessoa);
 listaCamadas.append(...CAMADAS.map((camada) => criarEscolha("checkbox", "camadas", camada, camada)));
 // A release segue o trimestre da data de fim: escolher a data já preenche a release.
@@ -5880,6 +6060,11 @@ el("dataFim").addEventListener("change", (evento) => {
         campoRelease.value = releaseDaData(data);
 });
 formulario.addEventListener("submit", aoEnviar);
+// Clicar no fundo escurecido fecha a confirmação (Esc já fecha nativamente).
+modalConfirmacao.addEventListener("click", (evento) => {
+    if (evento.target === modalConfirmacao)
+        modalConfirmacao.close();
+});
 formulario.addEventListener("input", atualizarCamposCondicionais);
 botaoCancelar.addEventListener("click", limparFormulario);
 filtroRelease.addEventListener("change", renderizarTabela);
@@ -6340,7 +6525,7 @@ campoImportarOkrs.addEventListener("change", () => void importarOkrs());
 // - datas em aaaa-mm-dd ou dd/mm/aaaa;
 // - OKRs em trios de colunas numeradas: okr1, okr1Grau, okr1Motivo, okr2...,
 //   com okr1Kr opcional (código do KR; em branco = o OKR como um todo);
-// - siglas, camadas, servicosAws, microsservicos e pessoas separados por "|" na mesma célula;
+// - siglas, camadas, servicosAws, microsservicos, tags e pessoas separados por "|" na mesma célula;
 // - id opcional: se preenchido, reimportar o arquivo atualiza em vez de duplicar;
 // - squads, siglas, serviços AWS e microsserviços que ainda não existem são
 //   aceitos e passam a existir. Camadas só da lista fixa (config.ts).
@@ -6362,6 +6547,7 @@ const COLUNAS_CSV_OPCIONAIS = [
     "camadas",
     "servicosAws",
     "microsservicos",
+    "tags",
     "pessoas",
     "impeditivo",
     "classificacao",
@@ -6553,6 +6739,7 @@ function formDataDaLinha(linha, numerosOkr, erros) {
     for (const [coluna, disponiveis] of [
         ["servicosAws", servicosAwsDisponiveis],
         ["microsservicos", microsservicosDisponiveis],
+        ["tags", tagsDisponiveis],
         ["pessoas", pessoasDisponiveis],
     ]) {
         for (const item of valor(coluna).split("|")) {
@@ -6614,12 +6801,14 @@ function registrosDoCsv(conteudo) {
         for (const [coluna, disponiveis] of [
             ["servicosaws", servicosAwsDisponiveis],
             ["microsservicos", microsservicosDisponiveis],
+            ["tags", tagsDisponiveis],
             ["pessoas", pessoasDisponiveis],
         ]) {
             const posicao = cabecalho.indexOf(coluna);
             const novos = {
                 servicosaws: opcoesDoCsvEmLeitura.servicosAws,
                 microsservicos: opcoesDoCsvEmLeitura.microsservicos,
+                tags: opcoesDoCsvEmLeitura.tags,
                 pessoas: opcoesDoCsvEmLeitura.pessoas,
             }[coluna];
             for (const item of (posicao >= 0 ? (campos[posicao] ?? "") : "").split("|")) {
@@ -6638,6 +6827,7 @@ function registrosDoCsv(conteudo) {
         opcoesDoCsvEmLeitura.servicosAws.clear();
         opcoesDoCsvEmLeitura.microsservicos.clear();
         opcoesDoCsvEmLeitura.pessoas.clear();
+        opcoesDoCsvEmLeitura.tags.clear();
     }
     return { registros: importados, erros };
 }
@@ -7094,21 +7284,18 @@ function tituloDoPonto(ponto) {
     return ponto.tipo === "gap" ? ponto.detalhe || ponto.rotulo : ponto.rotulo;
 }
 // ---------- Vínculo no formulário da entrega ----------
-// "Sem vínculo" e um bloco recolhível (<details>) por versão do PDI, com os
-// pontos em cartões. O mesmo ponto pode existir em várias versões, então o
-// radio pdiPonto leva "versão|ponto" (ver validar em app.ts). A intensidade
-// (pdiIntensidade) só aparece com um ponto escolhido.
+// Um bloco recolhível (<details>) por versão do PDI, com os pontos em cartões.
+// Cada cartão é uma caixa de marcar (pdiPonto = "versão|ponto": o mesmo ponto pode
+// existir em várias versões), e a entrega pode marcar quantos quiser. Logo abaixo de
+// cada cartão ficam as intensidades daquele ponto (pdiIntensidade-<versão|ponto>),
+// que só aparecem com ele marcado. Ver validar em app.ts.
 const escolhaVinculoPdi = el("pdi-vinculo-escolha");
-const escolhaIntensidadesPdi = el("pdi-intensidades-escolha");
-const blocoIntensidadePdi = el("pdi-intensidade-bloco");
-// Sem ponto escolhido, a intensidade volta (escondida) para o lugar dela no HTML.
-const lugarDaIntensidadePdi = blocoIntensidadePdi.parentElement;
 const DICA_INTENSIDADE = {
     baixo: "tocou no ponto",
     médio: "avançou o ponto",
     forte: "foi decisiva para o ponto",
 };
-function criarCartaoEscolhaPonto(valor, ponto, marcado) {
+function criarItemPonto(valor, ponto, marcado) {
     const conteudo = document.createElement("span");
     conteudo.className = "ponto-escolha-conteudo";
     const etiqueta = document.createElement("span");
@@ -7124,26 +7311,35 @@ function criarCartaoEscolhaPonto(valor, ponto, marcado) {
         icone.append(criarIcone(estilo.icone));
         etiqueta.append(icone, etiquetaDoPonto(ponto));
         titulo.textContent = tituloDoPonto(ponto);
-        titulo.title = titulo.textContent;
     }
-    else if (valor) {
+    else {
         etiqueta.textContent = "Fora desta versão";
         titulo.textContent = "Ponto que não existe mais nesta versão do PDI";
     }
-    else {
-        etiqueta.textContent = "Sem vínculo";
-        titulo.textContent = "Esta entrega não move nenhum ponto do PDI";
-    }
+    titulo.title = titulo.textContent;
     conteudo.append(etiqueta, titulo);
-    const cartao = criarEscolha("radio", "pdiPonto", valor, conteudo, marcado);
+    const cartao = criarEscolha("checkbox", "pdiPonto", valor, conteudo, !!marcado);
     cartao.classList.add("ponto-escolha");
-    // A cor vai no cartão inteiro: a faixa lateral acompanha a altura da linha da grade.
-    cartao.style.setProperty("--cor-ponto", cor);
-    if (!valor)
-        cartao.classList.add("ponto-escolha-nenhum");
-    return cartao;
+    // Intensidade deste ponto: três pílulas pequenas, só com o ponto marcado.
+    const intensidades = document.createElement("div");
+    intensidades.className = "escolhas ponto-intensidades";
+    intensidades.setAttribute("role", "radiogroup");
+    intensidades.ariaLabel = `Intensidade no ponto: ${titulo.textContent}`;
+    intensidades.append(...INTENSIDADES_PDI.map((intensidade) => {
+        const texto = document.createElement("span");
+        texto.className = `intensidade-escolha intensidade-${semAcentoMinusculo(intensidade)}`;
+        texto.textContent = intensidade.charAt(0).toUpperCase() + intensidade.slice(1);
+        texto.title = DICA_INTENSIDADE[intensidade];
+        return criarEscolha("radio", `pdiIntensidade-${valor}`, intensidade, texto, marcado?.intensidade === intensidade);
+    }));
+    // A cor vai no item inteiro: a faixa lateral acompanha a altura da linha da grade.
+    const item = document.createElement("div");
+    item.className = "ponto-item";
+    item.style.setProperty("--cor-ponto", cor);
+    item.append(cartao, intensidades);
+    return item;
 }
-function criarBlocoVersao(versao, idVersao, rotulo, selecionado, aberto, maisRecente) {
+function criarBlocoVersao(versao, idVersao, rotulo, marcados, aberto, maisRecente) {
     const bloco = document.createElement("details");
     bloco.className = "pdi-versao-bloco";
     bloco.open = aberto;
@@ -7155,7 +7351,7 @@ function criarBlocoVersao(versao, idVersao, rotulo, selecionado, aberto, maisRec
     const info = document.createElement("span");
     info.className = "dica";
     info.textContent = versao ? `${pontos.length} pontos` : "versão excluída";
-    // Preenchido por atualizarIntensidadePdi: mostra o ponto escolhido com o bloco fechado.
+    // Preenchido por atualizarPontosPdi: resume o que está marcado com o bloco fechado.
     const escolhido = document.createElement("span");
     escolhido.className = "pdi-versao-escolhido";
     resumo.append(nome);
@@ -7166,70 +7362,68 @@ function criarBlocoVersao(versao, idVersao, rotulo, selecionado, aberto, maisRec
         resumo.append(marca);
     }
     resumo.append(info, escolhido);
+    const daVersao = marcados.filter((m) => m.versao === idVersao);
     const grade = document.createElement("div");
     grade.className = "pontos-escolha";
-    const pontoMarcado = selecionado?.versao === idVersao ? selecionado.ponto : "";
-    grade.append(...pontos.map((ponto) => criarCartaoEscolhaPonto(`${idVersao}|${ponto.id}`, ponto, ponto.id === pontoMarcado)));
-    if (pontoMarcado && !pontos.some((p) => p.id === pontoMarcado)) {
-        grade.append(criarCartaoEscolhaPonto(`${idVersao}|${pontoMarcado}`, null, true));
-    }
+    grade.append(...pontos.map((ponto) => criarItemPonto(`${idVersao}|${ponto.id}`, ponto, daVersao.find((m) => m.ponto === ponto.id))), 
+    // Ponto que saiu da versão continua marcado enquanto a entrega o usar.
+    ...daVersao
+        .filter((m) => !pontos.some((p) => p.id === m.ponto))
+        .map((m) => criarItemPonto(`${idVersao}|${m.ponto}`, null, m)));
     bloco.append(resumo, grade);
     return bloco;
 }
-// A intensidade é do ponto escolhido: fica dentro do bloco da versão dele, logo
-// abaixo dos cartões. Sem ponto, some e fica desabilitada (não entra no FormData).
-function atualizarIntensidadePdi() {
-    const marcado = escolhaVinculoPdi.querySelector("input:checked");
-    const temPonto = !!marcado?.value;
-    const blocoDaVersao = temPonto ? marcado?.closest(".pdi-versao-bloco") : null;
-    if (blocoDaVersao)
-        blocoDaVersao.append(blocoIntensidadePdi);
-    else
-        lugarDaIntensidadePdi?.append(blocoIntensidadePdi);
-    blocoIntensidadePdi.hidden = !temPonto;
-    for (const radio of escolhaIntensidadesPdi.querySelectorAll("input"))
-        radio.disabled = !temPonto;
+// Mostra as intensidades só dos pontos marcados (as outras ficam desabilitadas e
+// não entram no FormData) e resume a marcação no título de cada versão.
+function atualizarPontosPdi() {
+    for (const item of escolhaVinculoPdi.querySelectorAll(".ponto-item")) {
+        const marcado = item.querySelector('input[name="pdiPonto"]')?.checked ?? false;
+        item.classList.toggle("marcado", marcado);
+        const intensidades = item.querySelector(".ponto-intensidades");
+        if (intensidades)
+            intensidades.hidden = !marcado;
+        for (const radio of intensidades?.querySelectorAll("input") ?? [])
+            radio.disabled = !marcado;
+    }
     for (const bloco of escolhaVinculoPdi.querySelectorAll(".pdi-versao-bloco")) {
-        const escolhidoAqui = marcado && bloco.contains(marcado) ? marcado : null;
-        const texto = escolhidoAqui?.closest("label")?.querySelector(".ponto-escolha-titulo")?.textContent ?? "";
+        const titulos = [...bloco.querySelectorAll('input[name="pdiPonto"]:checked')].map((caixa) => caixa.closest("label")?.querySelector(".ponto-escolha-titulo")?.textContent ?? "");
         const alvo = bloco.querySelector(".pdi-versao-escolhido");
-        if (alvo)
-            alvo.textContent = texto ? `✓ ${texto}` : "";
+        if (alvo) {
+            alvo.textContent =
+                titulos.length === 0 ? "" : titulos.length === 1 ? `✓ ${titulos[0]}` : `✓ ${titulos.length} pontos marcados`;
+        }
     }
 }
-function preencherVinculoPdi(vinculo) {
+function preencherVinculoPdi(vinculos) {
     const versoes = carregarVersoesPdi();
-    const selecionado = vinculo && { ...vinculo, versao: vinculo.versao ?? versoes[0]?.id ?? "" };
-    const aberta = selecionado?.versao ?? versoes.at(-1)?.id ?? "";
-    const blocos = [...versoes].reverse().map((versao) => criarBlocoVersao(versao, versao.id, rotuloVersaoPdi(versao, versoes), selecionado, versao.id === aberta, versao === versoes.at(-1)));
-    // Vínculo numa versão que foi excluída continua visível enquanto a entrega o usar.
-    if (selecionado?.versao && !versoes.some((v) => v.id === selecionado.versao)) {
-        blocos.push(criarBlocoVersao(null, selecionado.versao, "Versão excluída", selecionado, true, false));
+    // Vínculo de antes das versões (versao null) conta como da primeira versão.
+    const marcados = vinculos.map((v) => ({ ...v, versao: v.versao ?? versoes[0]?.id ?? "" }));
+    const comMarcacao = new Set(marcados.map((m) => m.versao));
+    const maisRecente = versoes.at(-1)?.id ?? "";
+    // Abre as versões com pontos marcados; sem nenhum, a mais recente.
+    const aberta = (id) => (comMarcacao.size > 0 ? comMarcacao.has(id) : id === maisRecente);
+    const blocos = [...versoes].reverse().map((versao) => criarBlocoVersao(versao, versao.id, rotuloVersaoPdi(versao, versoes), marcados, aberta(versao.id), versao.id === maisRecente));
+    // Vínculos numa versão que foi excluída continuam visíveis enquanto a entrega os usar.
+    for (const id of comMarcacao) {
+        if (id && !versoes.some((v) => v.id === id))
+            blocos.push(criarBlocoVersao(null, id, "Versão excluída", marcados, true, false));
     }
-    escolhaVinculoPdi.replaceChildren(criarCartaoEscolhaPonto("", null, !selecionado), ...blocos);
+    escolhaVinculoPdi.replaceChildren(...blocos);
     if (versoes.length === 0) {
         const aviso = document.createElement("p");
         aviso.className = "dica";
         aviso.textContent = "Cadastre o PDI no fim desta aba para vincular entregas.";
         escolhaVinculoPdi.append(aviso);
     }
-    escolhaIntensidadesPdi.replaceChildren(...INTENSIDADES_PDI.map((intensidade) => {
-        const texto = document.createElement("span");
-        texto.className = `intensidade-escolha intensidade-${semAcentoMinusculo(intensidade)}`;
-        const nome = document.createElement("strong");
-        nome.textContent = intensidade.charAt(0).toUpperCase() + intensidade.slice(1);
-        const dica = document.createElement("small");
-        dica.textContent = DICA_INTENSIDADE[intensidade];
-        texto.append(nome, dica);
-        return criarEscolha("radio", "pdiIntensidade", intensidade, texto, vinculo?.intensidade === intensidade);
-    }));
-    atualizarIntensidadePdi();
+    atualizarPontosPdi();
 }
 // O que está marcado agora no formulário da entrega (para refazer as opções sem perder).
-function vinculoNoFormulario() {
-    const marcado = (nome) => document.querySelector(`#form-registro input[name="${nome}"]:checked`)?.value ?? "";
-    const [versao = "", ponto = ""] = marcado("pdiPonto").split("|");
-    return ponto ? { versao: versao || null, ponto, intensidade: marcado("pdiIntensidade") } : null;
+function vinculosNoFormulario() {
+    return [...escolhaVinculoPdi.querySelectorAll('input[name="pdiPonto"]:checked')].map((caixa) => {
+        const [versao = "", ponto = ""] = caixa.value.split("|");
+        const intensidade = caixa.closest(".ponto-item")?.querySelector('.ponto-intensidades input:checked')?.value ?? "";
+        return { versao: versao || null, ponto, intensidade };
+    });
 }
 // ---------- Formulário do PDI (aba de edição) ----------
 const formularioPdi = el("form-pdi");
@@ -7402,7 +7596,7 @@ function criarCartaoVersaoPdi(versao, versoes) {
     return cartao;
 }
 function vinculosDaVersao(id, versoes) {
-    return registros.filter((r) => r.pdi && idDaVersaoDoVinculo(r.pdi, versoes) === id).length;
+    return registros.filter((r) => r.pdis.some((v) => idDaVersaoDoVinculo(v, versoes) === id)).length;
 }
 // Nova versão entra no fim (mais recente) e passa a ser a sugerida nas entregas novas.
 function adicionarVersaoPdi(pdi) {
@@ -7410,7 +7604,7 @@ function adicionarVersaoPdi(pdi) {
     const nova = { id: gerarIdVersaoPdi(), criadaEm: new Date().toISOString(), pdi };
     salvarVersoesPdi([...versoes, nova]);
     mostrarVersaoPdi(nova.id);
-    preencherVinculoPdi(null);
+    preencherVinculoPdi([]);
 }
 const agora = () => new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 function aoSalvarPdi(evento) {
@@ -7426,8 +7620,7 @@ function aoSalvarPdi(evento) {
     }
     renderizarTabela(); // os textos da coluna PDI podem ter mudado
     // Sem limpar o que está sendo digitado na entrega: só refaz as opções.
-    const atual = vinculoNoFormulario();
-    preencherVinculoPdi(atual);
+    preencherVinculoPdi(vinculosNoFormulario());
     statusPdi.textContent = `PDI salvo às ${agora()}.`;
 }
 function criarNovaVersaoPdi() {
@@ -7448,7 +7641,7 @@ function excluirVersaoPdi() {
         return;
     salvarVersoesPdi(versoes.filter((v) => v.id !== versao.id));
     mostrarVersaoPdi(null);
-    preencherVinculoPdi(vinculoNoFormulario());
+    preencherVinculoPdi(vinculosNoFormulario());
     statusPdi.textContent = "Versão excluída.";
 }
 function exportarPdi() {
@@ -7532,33 +7725,39 @@ async function tagDoPdiPublicado() {
     if (!CHAVE_PDI || versoes.length === 0)
         return "";
     // Vínculos antigos (sem versão) já vão com a versão resolvida.
-    const vinculos = Object.fromEntries(registros.flatMap((r) => (r.pdi ? [[r.id, { ...r.pdi, versao: idDaVersaoDoVinculo(r.pdi, versoes) }]] : [])));
+    const vinculos = Object.fromEntries(registros
+        .filter((r) => r.pdis.length > 0)
+        .map((r) => [r.id, r.pdis.map((v) => ({ ...v, versao: idDaVersaoDoVinculo(v, versoes) }))]));
     const envelope = await cifrarParaCoordenador(CHAVE_PDI, { versoes, vinculos });
     // Só base64 e JSON: nenhum "<" que feche a tag antes da hora.
     return `<script type="application/json" id="pdi-publicado">${JSON.stringify(envelope)}<\/script>\n`;
 }
 // ---------- Coluna PDI na tabela da aba de edição ----------
-// "Gap · Técnica: <gap a desenvolver> (forte)"; com várias versões, diz qual.
-function textoDoVinculoPdi(vinculo) {
-    if (!vinculo)
+// "Gap · Técnica: <gap a desenvolver> (forte)", um por ponto; com várias versões, diz qual.
+function textoDoVinculoPdi(vinculos) {
+    if (vinculos.length === 0)
         return "—";
     const versoes = carregarVersoesPdi();
-    const versao = versoes.find((v) => v.id === idDaVersaoDoVinculo(vinculo, versoes));
-    const ponto = pontosDoPdi(versao?.pdi ?? null).find((p) => p.id === vinculo.ponto);
-    const nome = ponto ? `${etiquetaDoPonto(ponto)}: ${tituloDoPonto(ponto)}` : "Ponto fora do PDI";
-    const qual = versoes.length > 1 && versao ? ` · ${rotuloVersaoPdi(versao, versoes)}` : "";
-    return `${nome} (${vinculo.intensidade})${qual}`;
+    return vinculos
+        .map((vinculo) => {
+        const versao = versoes.find((v) => v.id === idDaVersaoDoVinculo(vinculo, versoes));
+        const ponto = pontosDoPdi(versao?.pdi ?? null).find((p) => p.id === vinculo.ponto);
+        const nome = ponto ? `${etiquetaDoPonto(ponto)}: ${tituloDoPonto(ponto)}` : "Ponto fora do PDI";
+        const qual = versoes.length > 1 && versao ? ` · ${rotuloVersaoPdi(versao, versoes)}` : "";
+        return `${nome} (${vinculo.intensidade})${qual}`;
+    })
+        .join("; ");
 }
 // ---------- Inicialização ----------
 mostrarVersaoPdi(null);
-preencherVinculoPdi(null);
+preencherVinculoPdi([]);
 renderizarTabela(); // app.ts: primeira vez aqui, porque a coluna PDI usa textoDoVinculoPdi
 formularioPdi.addEventListener("submit", aoSalvarPdi);
 el("btn-nova-versao-pdi").addEventListener("click", criarNovaVersaoPdi);
 el("btn-excluir-versao-pdi").addEventListener("click", excluirVersaoPdi);
 el("btn-exportar-pdi").addEventListener("click", exportarPdi);
 campoImportarPdi.addEventListener("change", () => void importarPdi());
-escolhaVinculoPdi.addEventListener("change", atualizarIntensidadePdi);
+escolhaVinculoPdi.addEventListener("change", atualizarPontosPdi);
 
 </script>
 <script data-app>
@@ -8866,7 +9065,7 @@ function criarCartaoEntrega(registro) {
     const cartao = criarElemento("article", "entrega");
     cartao.style.setProperty("--cor-tipo", CORES_TIPO[registro.tipo]);
     const chips = criarElemento("div", "entrega-chips");
-    chips.append(criarElemento("span", "etiqueta", rotuloReleaseSprint(registro)), criarElemento("span", "etiqueta", registro.squad), ...registro.okrs.map(criarChipOkr), ...registro.camadas.map((camada) => criarElemento("span", "etiqueta etiqueta-camada", camada)), ...registro.servicosAws.map((servico) => criarElemento("span", "etiqueta etiqueta-aws", servico)));
+    chips.append(criarElemento("span", "etiqueta", rotuloReleaseSprint(registro)), criarElemento("span", "etiqueta", registro.squad), ...registro.okrs.map(criarChipOkr), ...registro.camadas.map((camada) => criarElemento("span", "etiqueta etiqueta-camada", camada)), ...registro.servicosAws.map((servico) => criarElemento("span", "etiqueta etiqueta-aws", servico)), ...registro.tags.map((tag) => criarElemento("span", "etiqueta etiqueta-tag", `#${tag}`)));
     const rodape = criarElemento("div", "entrega-rodape");
     rodape.append(criarElemento("span", "dica", `Lead time: ${plural(leadTimeEmDias(registro), "dia", "dias")}`), criarBotao("Ver detalhes", "link", () => abrirDetalhesEntrega(registro)));
     const info = criarElemento("div", "entrega-info");
@@ -8924,6 +9123,8 @@ function abrirDetalhesEntrega(registro) {
         adicionarDetalhe(detalhes, "Serviços AWS", registro.servicosAws.join(", "));
     if (registro.microsservicos.length > 0)
         adicionarDetalhe(detalhes, "Microsserviços", registro.microsservicos.join(", "));
+    if (registro.tags.length > 0)
+        adicionarDetalhe(detalhes, "Tags", registro.tags.join(", "));
     if (historia) {
         adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
         if (historia.funcional)
@@ -8976,6 +9177,7 @@ function textoPesquisavel(registro) {
         ...registro.camadas,
         ...registro.servicosAws,
         ...registro.microsservicos,
+        ...registro.tags,
         historia?.funcional ? historia.bcp : "",
         gmud?.nome ?? "",
         gmud?.titulo ?? "",
@@ -9173,13 +9375,14 @@ const INTENSIDADES_DECRESCENTES = [...INTENSIDADES_PDI].reverse();
 const maiuscula = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
 // ---------- Desbloqueio ----------
 // Páginas publicadas antes das versões levavam { pdi, vinculos }: vira uma versão só.
+// E antes de vários pontos por entrega, cada vínculo era um objeto: vira lista de um.
 function conteudoPublicado(valor) {
     if (typeof valor !== "object" || valor === null)
         return null;
     const { versoes, pdi, vinculos } = valor;
     if (typeof vinculos !== "object" || vinculos === null)
         return null;
-    const mapa = vinculos;
+    const mapa = Object.fromEntries(Object.entries(vinculos).map(([id, v]) => [id, Array.isArray(v) ? v : [v]]));
     if (Array.isArray(versoes) && versoes.every(versaoPdiValida))
         return { versoes, vinculos: mapa };
     if (pdiValido(pdi))
@@ -9424,7 +9627,7 @@ function criarCartaoRitmoPdi() {
     const cartao = criarElemento("section", "cartao grafico col-12 ritmo pdi-ritmo");
     const cabecalho = criarElemento("div", "ritmo-cabecalho");
     const textos = criarElemento("div");
-    textos.append(criarElemento("h2", "", "Ritmo do PDI"), criarElemento("p", "dica", "Entregas ligadas a pontos do PDI ao longo do tempo, no total e por intensidade."));
+    textos.append(criarElemento("h2", "", "Ritmo do PDI"), criarElemento("p", "dica", "Entregas ligadas a pontos do PDI ao longo do tempo, no total e por intensidade (cada entrega conta pela maior intensidade entre os pontos que move)."));
     const abas = criarElemento("div", "abas-texto");
     abas.setAttribute("role", "group");
     abas.ariaLabel = "Granularidade do ritmo do PDI";
@@ -9465,10 +9668,10 @@ function desenharRitmoPdi() {
 }
 function renderizarPainelPdi(conteudo) {
     const versoes = conteudo === "local" ? carregarVersoesPdi() : conteudo.versoes;
-    const vinculoDe = (registro) => {
-        const vinculo = conteudo === "local" ? registro.pdi : (conteudo.vinculos[registro.id] ?? null);
-        return vinculo && { ...vinculo, versao: idDaVersaoDoVinculo(vinculo, versoes) };
-    };
+    const vinculosDe = (registro) => (conteudo === "local" ? registro.pdis : (conteudo.vinculos[registro.id] ?? [])).map((vinculo) => ({
+        ...vinculo,
+        versao: idDaVersaoDoVinculo(vinculo, versoes),
+    }));
     const versao = versoes.find((v) => v.id === versaoPdiDashboard) ?? versoes.at(-1);
     const pdi = versao?.pdi ?? null;
     const campos = pdi?.campos ?? {};
@@ -9504,11 +9707,13 @@ function renderizarPainelPdi(conteudo) {
     const pontos = pontosDoPdi(pdi);
     const porPonto = new Map(pontos.map((p) => [p.id, []]));
     const foraDoPdi = [];
+    // Uma entrega pode mover vários pontos: entra em cada um, com a intensidade daquele ponto.
     for (const registro of registrosFiltrados) {
-        const vinculo = vinculoDe(registro);
-        if (!vinculo || vinculo.versao !== versao.id)
-            continue;
-        (porPonto.get(vinculo.ponto) ?? foraDoPdi).push({ registro, intensidade: vinculo.intensidade });
+        for (const vinculo of vinculosDe(registro)) {
+            if (vinculo.versao !== versao.id)
+                continue;
+            (porPonto.get(vinculo.ponto) ?? foraDoPdi).push({ registro, intensidade: vinculo.intensidade });
+        }
     }
     const resumos = pontos.map((ponto) => {
         const itens = porPonto.get(ponto.id) ?? [];
@@ -9518,15 +9723,17 @@ function renderizarPainelPdi(conteudo) {
         const ponto = { id: "gap_removido", tipo: "gap", rotulo: "Removido", detalhe: "Pontos que saíram desta versão do PDI" };
         resumos.push({ ponto, estilo: { categoria: "Removido", cor: "var(--grau-indefinido)", icone: "alerta" }, itens: foraDoPdi, pontuacao: pontuacaoDe(foraDoPdi) });
     }
+    // `todas` tem um item por ponto movido; `entregas`, cada entrega uma vez só.
     const todas = resumos.flatMap((r) => r.itens);
+    const entregas = new Set(todas.map((item) => item.registro.id)).size;
     const pontuacaoTotal = pontuacaoDe(todas);
     const movidos = resumos.filter((r) => r.itens.length > 0).length;
     const media = todas.length > 0 ? pontuacaoTotal / todas.length : 0;
     const kpis = criarElemento("div", "faixa-kpis pdi-kpis");
-    kpis.append(criarIndicador("Entregas no PDI", todas.length.toString(), {
+    kpis.append(criarIndicador("Entregas no PDI", entregas.toString(), {
         icone: "lista",
         unidade: `de ${registrosFiltrados.length}`,
-        percentual: percentualDe(todas.length, registrosFiltrados.length),
+        percentual: percentualDe(entregas, registrosFiltrados.length),
         complemento: "da seleção movem algum ponto desta versão",
     }), criarIndicador("Pontos em movimento", movidos.toString(), {
         icone: "alvo",
@@ -9539,7 +9746,13 @@ function renderizarPainelPdi(conteudo) {
         percentual: Math.round((media / 3) * 100),
         complemento: todas.length > 0 ? `nível ${nomeDaMedia(media)} · ${pontuacaoTotal} pts no total` : "nenhuma entrega ligada ainda",
     }));
-    intensidadesNoRitmoPdi = new Map(todas.map((item) => [item.registro.id, item.intensidade]));
+    // No ritmo cada entrega conta uma vez, pela maior intensidade entre os pontos dela.
+    intensidadesNoRitmoPdi = new Map();
+    for (const { registro, intensidade } of todas) {
+        const atual = intensidadesNoRitmoPdi.get(registro.id);
+        if (!atual || PESO_INTENSIDADE[intensidade] > PESO_INTENSIDADE[atual])
+            intensidadesNoRitmoPdi.set(registro.id, intensidade);
+    }
     const graficos = criarElemento("div", "grade-12");
     if (todas.length > 0) {
         graficos.append(criarCartaoRitmoPdi(), criarRankingPontos(resumos), criarRoscaCategorias(resumos));
