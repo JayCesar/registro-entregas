@@ -32,16 +32,13 @@ Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos
 - Dê dois cliques no `registro-entregas.html`. Ele abre no Edge ou no Chrome.
 - **Use sempre o mesmo navegador.** As entregas importadas ficam guardadas nele, não no arquivo.
 
-**Senha da aba Edição:** o arquivo do GitHub vem com a senha `123`. Para usar outra só no seu PC, sem expô-la no GitHub:
-1. Abra o `registro-entregas.html` no Bloco de Notas.
-2. Com `Ctrl+F`, procure `SENHA_EDICAO = "123"` e troque o `123` pela sua senha.
-3. Salve. Lembre de repetir isso quando atualizar o arquivo.
+**Senha da aba Edição:** é o valor de `SENHA_EDICAO`. Para trocar, abra o `registro-entregas.html` no Bloco de Notas, procure (`Ctrl+F`) `SENHA_EDICAO`, troque o valor entre aspas e salve. Lembre de repetir isso quando atualizar o arquivo.
 
 ### Passo 3: criar a planilha (uma vez)
 
 1. Abra o Bloco de Notas, cole a linha abaixo e salve como `entregas.csv` (Tipo: *Todos os arquivos*, Codificação: *UTF-8*):
    ```
-   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;complexidade;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo
+   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;complexidade;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo
    ```
 2. Abra o `entregas.csv` no Excel. Cada nome vira uma coluna, porque o `;` é o separador padrão do Excel em pt-BR.
 3. Preencha uma linha por entrega. O formato de cada coluna está na seção 3.
@@ -64,6 +61,36 @@ Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos
 6. Mande o link para os gestores. Depois de 1 hora ele para de funcionar.
 
 > Para tirar a página do ar antes de 1 hora, apague o arquivo no bucket.
+
+### Alternativa: copiar arquivo por arquivo (igual roda no repositório)
+
+Se preferir ter no banco a mesma estrutura do repositório (o `index.html` que abre aqui), copie estes **15 arquivos** pelo mesmo método do passo 1 (abrir no GitHub → **Raw** → `Ctrl+A`, `Ctrl+C` → Bloco de Notas → *Salvar como*, Tipo *Todos os arquivos*, Codificação *UTF-8*), mantendo **exatamente** estes nomes e pastas:
+
+```
+registro-entregas\
+├── index.html
+├── style.css
+├── favicon.svg
+└── dist\
+    ├── abas.js
+    ├── app.js
+    ├── config.js
+    ├── csv.js
+    ├── dashboard.js
+    ├── graficos.js
+    ├── icones.js
+    ├── okrs.js
+    ├── pdi.js
+    ├── pdi-dashboard.js
+    ├── perfil.js
+    └── tema.js
+```
+
+Depois é só dar dois cliques no `index.html`. Funciona sem servidor: os scripts são JavaScript comum (sem `import`/módulos), então o navegador aceita abrir direto do disco. `src/`, `scripts/`, `package.json` e `tsconfig.json` **não** são necessários: o navegador só lê o que está em `dist/`. A senha, nesse caso, fica em `dist/config.js`.
+
+Dois cuidados:
+- **Botão "Gerar página para o S3"** só existe no `registro-entregas.html`. Para publicar: na aba Edição do `index.html`, clique em **Exportar JSON**; abra o `registro-entregas.html`, **Importar JSON** com esse arquivo e clique em **Gerar página para o S3** (passo 4 em diante).
+- Se um arquivo faltar ou tiver nome/pasta errados, a página abre quebrada (sem estilo ou sem dados). Aperte `F12` → aba **Console**: o erro mostra qual arquivo não foi encontrado.
 
 ### Atualizar o app quando houver versão nova
 
@@ -189,23 +216,31 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `impeditivo` | não | texto; em branco = não houve | `Ambiente de homologação fora do ar` |
 | `classificacao` | só para **História** | `funcional` ou `nao-funcional` | `funcional` |
 | `bcp` | só para História **funcional** | texto | `BCP-1042` |
-| `complexidade` | não | número (aceita vírgula) | `3,5` |
-| `gmudNome` | não (História/Bug) | nome/número da GMUD | `GMUD-48211` |
+| `complexidade` | não (História, funcional ou não) | número (aceita vírgula) | `3,5` |
+| `gmudNome` | não (História/Bug) | número da GMUD | `GMUD-48211` |
 | `gmudLink` | não | URL `https://...`; exige `gmudNome` | `https://gmud.empresa/48211` |
 | `git` | não | `sim` ou `nao` (em branco = `nao`) | `sim` |
 | `linkPr` | não | URL do Pull Request | `https://github.com/.../pull/312` |
 | `linkActions` | não | URL do deploy em produção (só vale com GMUD) | `https://github.com/.../actions/runs/77` |
-| `okr1` | **sim** | `A`, `B` ou `C` (lista em `src/config.ts`) | `A` |
+| `okr1` | **sim** | código de um OKR cadastrado (cartão **OKRs e KRs**; sem cadastro, `A`, `B` ou `C`) | `A` |
+| `okr1Kr` | não | código de um KR desse OKR; em branco = o OKR como um todo | `KR1` |
 | `okr1Grau` | **sim** | `Alto`, `Médio` ou `Baixo` | `Alto` |
 | `okr1Motivo` | **sim** | por que a entrega impacta esse OKR | `Reduz chamadas ao atendimento` |
 | `okr2…`, `okr3…` | não | mesmo trio para mais OKRs. Precisa de mais? Crie `okr4`, `okr4Grau`, `okr4Motivo` | |
+| `camadas` | não no CSV (**sim** no formulário) | `Backend`, `Frontend`, `Database`, `Infra`, separadas por `\|` | `Backend\|Database` |
+| `servicosAws` | não | separados por `\|`; serviços novos são aceitos e passam a existir | `ECS\|SQS` |
+| `microsservicos` | não | criados ou alterados, separados por `\|`; novos são aceitos e passam a existir | `ms-reservas` |
+| `pessoas` | não | pessoas envolvidas, separadas por `\|`; novas são aceitas. Só aparecem na aba Edição (nunca no dashboard nem na página publicada) | `Italo\|Thales` |
+| `gmudTitulo` | não | nome da GMUD (exige `gmudNome`, que é o número) | `Ajuste no fluxo de reservas` |
 
 **Duas regras valem para o formulário, o CSV e o JSON:**
 
 - **A release é a do trimestre da data de fim.** Uma entrega com fim em outubro só pode ser R4; se vier como R1, a linha é recusada com o motivo. No formulário, escolher a data de fim já preenche a release.
 - **Só entram entregas com data de fim a partir de 2026** (`ANO_INICIAL` em `src/config.ts`). Entregas mais antigas que já estejam no navegador ficam fora do dashboard, mas continuam na tabela da aba Edição, onde podem ser excluídas.
 
-Os OKRs, a senha da aba de edição, o `ANO_INICIAL` e as listas iniciais de squads e siglas ficam em `src/config.ts`. Depois de alterar, rode `npm run build`.
+Reimportar uma planilha com `camadas`, `servicosAws`, `microsservicos`, `pessoas` ou `gmudTitulo` em branco **não apaga** o que foi marcado no formulário (o mesmo vale para o vínculo com o PDI).
+
+Os OKRs e KRs são cadastrados na aba Edição (cartão **OKRs e KRs**). A senha da aba de edição, o `ANO_INICIAL`, as camadas, os OKRs iniciais e as listas iniciais de squads, siglas, serviços AWS e microsserviços ficam em `src/config.ts`. Depois de alterar, rode `npm run build`.
 
 ---
 
@@ -291,6 +326,37 @@ Por que a página é **um arquivo só**: o link pré-assinado vale para um únic
 
 ---
 
+## 4.0 OKRs e KRs
+
+- **Cadastro:** aba Edição → cartão **OKRs e KRs**. Cada OKR tem um **código** (o que vai no CSV e nas entregas, ex.: `A`), o **objetivo** e os **KRs** (código, ex.: `KR1`, e descrição). Sem nada cadastrado, valem `A`, `B` e `C` de `src/config.ts`.
+- **Na entrega:** cada OKR é um bloco que abre e fecha. Dentro dele, escolha **Não impacta**, **OKR como um todo** ou um **KR**, e depois o grau e o motivo. É preciso ao menos um OKR.
+- **Proteções:** códigos repetidos não são aceitos, e um OKR ou KR usado por alguma entrega não pode ser removido.
+- **Dashboard:** a seção 04 mostra o título de cada OKR e, no detalhe, quantas entregas há em cada KR. A página gerada pelo botão "Gerar página para o S3" leva o cadastro junto.
+- **Backup:** **Exportar/Importar JSON** no próprio cartão.
+
+## 4.1 PDI (seção restrita ao coordenador)
+
+- **Cadastro:** aba Edição → cartão **PDI**. As versões aparecem em cartões no topo (checkpoint, pontos, entregas ligadas); clicar abre a versão no formulário. Os campos e as chaves são os do JSON do site da gestora (`{ "versao": 1, "campos": { ... } }`). **Importar JSON como nova versão** lê o arquivo dela sem conversão, e **Exportar JSON do PDI** devolve o mesmo formato.
+- **Versões:** cada PDI novo (novo checkpoint) é uma **versão**. Importar um JSON cria uma versão; **Nova versão (copiar esta)** cria uma a partir da atual para você ajustar. Uma versão com entregas ligadas não pode ser excluída.
+- **Vínculo:** no formulário da entrega, cada **versão do PDI** é um bloco que abre e fecha (abre a mais recente). Escolha o **ponto** (gap ou experiência, em cartões) e a **intensidade** (baixo, médio ou forte). É opcional. Cada entrega fica presa à versão em que foi registrada, e entregas antigas contam na primeira versão. Reimportar o CSV não apaga os vínculos.
+- **Dashboard:** a seção **05 · PDI** só mostra o conteúdo com a **senha do coordenador**, que é diferente da senha de edição. Mostra indicadores, um ranking de quanto cada ponto está sendo mexido (forte 3, médio 2, baixo 1 ponto), o esforço por categoria e um cartão por ponto. Com mais de uma versão, os chips no topo trocam a versão exibida.
+
+### Configurar a senha do coordenador (uma vez, no PC com Node)
+
+```bash
+node scripts/senha-pdi.mjs   # o coordenador digita a senha (não aparece na tela)
+npm run build                # gera dist/ e o registro-entregas.html com a chave nova
+```
+
+Depois leve o novo `registro-entregas.html` (ou `dist/config.js`) para o banco. Para trocar a senha, rode o script de novo.
+
+**Como fica protegida:** a senha não é gravada em lugar nenhum. O script grava em `CHAVE_PDI` (`src/config.ts`) só uma chave pública e a chave privada **cifrada** com uma chave derivada da senha (PBKDF2-SHA256, 600 mil iterações, AES-GCM). No navegador, a senha certa é a que consegue decifrar a chave privada. Na página publicada, o PDI e os vínculos vão **cifrados** com a chave pública, então quem gera a página não precisa da senha, e quem só tem o link não lê o PDI nem no código-fonte.
+
+Limites:
+- No seu navegador, o PDI fica legível no `localStorage`, porque é você quem cadastra. Ali a senha só esconde a seção.
+- `npm run publicar` (Node) publica sem o PDI. Só o botão **Gerar página para o S3** leva o PDI cifrado.
+- Uma página publicada antes de uma troca de senha continua abrindo só com a senha antiga.
+
 ## 5. Estrutura
 
 ```
@@ -303,6 +369,7 @@ dist/*.js             código compilado (versionado para abrir sem instalar nada
 dados/                modelo do CSV; seus CSVs e JSONs exportados ficam aqui e não vão para o Git
 exemplos/             CSV e JSON de exemplo, prontos para importar
 scripts/publicar.mjs  gera a página única e, opcionalmente, sobe para o S3
+scripts/senha-pdi.mjs define a senha do coordenador da seção PDI (grava CHAVE_PDI em src/config.ts)
 ```
 
 **Segurança da aba de edição:** a senha em `src/config.ts` só evita edição acidental. Ela fica visível no código-fonte, não é proteção de verdade.

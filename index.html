@@ -14,11 +14,16 @@
   <!-- Gerados por `npm run build` a partir de src/*.ts. A ordem importa: config antes de app. -->
   <script src="dist/config.js" defer></script>
   <script src="dist/app.js" defer></script>
+  <!-- Antes de csv.js: a validação do CSV embutido na página publicada já usa os OKRs cadastrados. -->
+  <script src="dist/okrs.js" defer></script>
   <script src="dist/csv.js" defer></script>
   <script src="dist/perfil.js" defer></script>
   <script src="dist/icones.js" defer></script>
+  <!-- Depois de icones.js: o seletor de pontos do PDI usa criarIcone ao carregar. -->
+  <script src="dist/pdi.js" defer></script>
   <script src="dist/graficos.js" defer></script>
   <script src="dist/dashboard.js" defer></script>
+  <script src="dist/pdi-dashboard.js" defer></script>
   <script src="dist/abas.js" defer></script>
 </head>
 <body>
@@ -31,6 +36,7 @@
       <a href="#sec-indicadores" title="Indicadores"><span data-icone="medidor"></span><span class="trilho-rotulo">Indicadores</span></a>
       <a href="#sec-volumetria" title="Volumetria"><span data-icone="barras"></span><span class="trilho-rotulo">Volumetria</span></a>
       <a href="#sec-impacto" title="Impacto"><span data-icone="alvo"></span><span class="trilho-rotulo">Impacto</span></a>
+      <a href="#sec-pdi" title="PDI (restrito)"><span data-icone="cadeado"></span><span class="trilho-rotulo">PDI</span></a>
       <a href="#sec-entregas" title="Entregas"><span data-icone="lista"></span><span class="trilho-rotulo">Entregas</span></a>
     </nav>
     <div class="trilho-rodape">
@@ -166,9 +172,21 @@
           <div class="grade-12" id="dash-graficos-impacto"></div>
         </section>
 
-        <section class="secao" id="sec-entregas">
+        <section class="secao" id="sec-pdi">
           <header class="secao-cabecalho">
             <span class="secao-numero">05</span>
+            <div>
+              <h2>PDI</h2>
+              <p class="dica">Como as entregas da seleção movem cada ponto do PDI (gaps e experiências) e com que intensidade. Restrito ao coordenador.</p>
+            </div>
+          </header>
+          <!-- Senha do coordenador ou, liberado, o painel do PDI (ver pdi-dashboard.ts). -->
+          <div id="dash-pdi"></div>
+        </section>
+
+        <section class="secao" id="sec-entregas">
+          <header class="secao-cabecalho">
+            <span class="secao-numero">06</span>
             <div>
               <h2>Entregas em detalhe</h2>
               <p class="dica" id="dash-periodo"></p>
@@ -236,13 +254,14 @@
             <small class="erro" data-erro="tipo"></small>
           </div>
 
-          <div class="campo">
-            <label for="squad">Squad envolvida *</label>
-            <select id="squad" name="squad"></select>
+          <fieldset class="campo duplo">
+            <legend>Squad envolvida *</legend>
+            <!-- Pílulas de escolha única (radio "squad"), criadas por app.ts. -->
+            <div class="escolhas" id="lista-squads"></div>
             <!-- "+ Nova squad", criado por criarCadastroRapido() em app.ts. -->
             <div id="nova-squad"></div>
             <small class="erro" data-erro="squad"></small>
-          </div>
+          </fieldset>
         </div>
 
         <div class="grade">
@@ -260,14 +279,28 @@
         </div>
 
         <div class="grade">
-          <fieldset class="campo largo">
+          <fieldset class="campo largo vinculo-pdi">
             <legend>OKRs impactados *</legend>
-            <!-- Linhas criadas por adicionarLinhaOkr() em app.ts: OKR, grau de impacto e motivo. -->
-            <div id="lista-okrs"></div>
-            <div>
-              <button type="button" id="btn-adicionar-okr" class="secundario">+ Adicionar OKR</button>
-            </div>
+            <span class="dica">Abra cada OKR que a entrega impacta, escolha o KR (ou o OKR como um todo), o grau e o motivo.</span>
+            <!-- Um bloco recolhível por OKR do cadastro, com os KRs em cartões (ver okrs.ts). -->
+            <div class="vinculo-pdi-escolha" id="okr-escolha"></div>
             <small class="erro" data-erro="okrs"></small>
+          </fieldset>
+        </div>
+
+        <!-- Opcional. Ponto (gap ou experiência) de uma versão do PDI e intensidade,
+             como radios criados por pdi.ts. -->
+        <div class="grade">
+          <fieldset class="campo largo vinculo-pdi">
+            <legend>Ponto do PDI que a entrega move <span class="dica">(opcional)</span></legend>
+            <!-- "Sem vínculo" e um bloco recolhível por versão do PDI (ver pdi.ts). -->
+            <div class="vinculo-pdi-escolha" id="pdi-vinculo-escolha"></div>
+            <small class="erro" data-erro="pdiPonto"></small>
+            <div class="vinculo-pdi-intensidade" id="pdi-intensidade-bloco" hidden>
+              <span class="dica">Com que intensidade a entrega move este ponto do PDI?</span>
+              <div class="escolhas" id="pdi-intensidades-escolha"></div>
+              <small class="erro" data-erro="pdiIntensidade"></small>
+            </div>
           </fieldset>
         </div>
 
@@ -281,6 +314,13 @@
             </div>
             <small class="erro" data-erro="classificacao"></small>
           </fieldset>
+
+          <!-- Para toda História, funcional ou não -->
+          <div class="campo">
+            <label for="complexidade">Complexidade</label>
+            <input type="number" id="complexidade" name="complexidade" min="0" step="any">
+            <small class="erro" data-erro="complexidade"></small>
+          </div>
         </div>
 
         <!-- Só para História funcional -->
@@ -289,12 +329,6 @@
             <label for="bcp">BCP *</label>
             <input type="text" id="bcp" name="bcp">
             <small class="erro" data-erro="bcp"></small>
-          </div>
-
-          <div class="campo">
-            <label for="complexidade">Complexidade</label>
-            <input type="number" id="complexidade" name="complexidade" min="0" step="any">
-            <small class="erro" data-erro="complexidade"></small>
           </div>
         </div>
 
@@ -332,15 +366,43 @@
 
           <fieldset class="campo">
             <legend>Siglas envolvidas</legend>
-            <div class="opcoes" id="lista-siglas"></div>
+            <!-- Pílulas de múltipla escolha (checkbox "siglas"), criadas por app.ts. -->
+            <div class="escolhas" id="lista-siglas"></div>
             <div id="nova-sigla"></div>
+          </fieldset>
+        </div>
+
+        <!-- O que a entrega mexeu tecnicamente. Pílulas criadas por app.ts. -->
+        <div class="grade">
+          <fieldset class="campo">
+            <legend>Camada *</legend>
+            <div class="escolhas" id="lista-camadas"></div>
+            <small class="erro" data-erro="camadas"></small>
+          </fieldset>
+
+          <fieldset class="campo duplo">
+            <legend>Microsserviços criados ou alterados</legend>
+            <div class="escolhas" id="lista-microsservicos"></div>
+            <div id="novo-microsservico"></div>
+          </fieldset>
+
+          <fieldset class="campo largo">
+            <legend>Serviços AWS envolvidos</legend>
+            <div class="escolhas" id="lista-servicos-aws"></div>
+            <div id="novo-servico-aws"></div>
+          </fieldset>
+
+          <fieldset class="campo largo">
+            <legend>Pessoas envolvidas <span class="dica">(só aparece aqui na edição)</span></legend>
+            <div class="escolhas" id="lista-pessoas"></div>
+            <div id="nova-pessoa"></div>
           </fieldset>
         </div>
 
         <!-- Só para História ou Bug -->
         <div class="grade" id="sec-gmud" hidden>
           <div class="campo">
-            <label for="gmudNome">GMUD (nome/número do documento)</label>
+            <label for="gmudNome">Número da GMUD</label>
             <input type="text" id="gmudNome" name="gmudNome" placeholder="Ex.: GMUD-12345">
             <small class="erro" data-erro="gmudNome"></small>
           </div>
@@ -349,6 +411,12 @@
             <label for="gmudLink">Link da GMUD</label>
             <input type="url" id="gmudLink" name="gmudLink" placeholder="https://...">
             <small class="erro" data-erro="gmudLink"></small>
+          </div>
+
+          <!-- Só quando há número de GMUD -->
+          <div class="campo largo" id="sec-gmud-titulo" hidden>
+            <label for="gmudTitulo">Nome da GMUD</label>
+            <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
           </div>
         </div>
 
@@ -392,6 +460,13 @@
         <span id="contador" class="dica"></span>
       </div>
 
+      <!-- Busca: filtra pelo texto de todas as colunas, junto com os filtros abaixo. -->
+      <label class="busca-campo busca-tabela">
+        <span data-icone="lupa"></span>
+        <input type="search" id="busca-tabela" placeholder="Buscar nos registros: assunto, squad, GMUD, pessoa, microsserviço, OKR, PDI…"
+               autocomplete="off" aria-label="Buscar nos registros">
+      </label>
+
       <div class="filtros">
         <div class="campo">
           <label for="filtro-release">Release</label>
@@ -432,8 +507,13 @@
               <th>Complexidade</th>
               <th>GMUD</th>
               <th>OKRs impactados</th>
+              <th>PDI</th>
               <th>Squad</th>
               <th>Siglas</th>
+              <th>Camadas</th>
+              <th>Serviços AWS</th>
+              <th>Microsserviços</th>
+              <th>Pessoas</th>
               <th>Início</th>
               <th>Fim</th>
               <th>Lead time</th>
@@ -449,6 +529,58 @@
           <tbody id="corpo-tabela"></tbody>
         </table>
       </div>
+    </section>
+
+    <!-- Cadastro de OKRs e KRs: alimenta o seletor do formulário e o dashboard (ver okrs.ts). -->
+    <section class="cartao">
+      <div class="cabecalho-tabela">
+        <h2>OKRs e KRs</h2>
+        <div class="acoes-dados">
+          <button type="button" id="btn-exportar-okrs" class="secundario">Exportar JSON</button>
+          <label class="botao secundario" for="importar-okrs">Importar JSON</label>
+          <input type="file" id="importar-okrs" accept="application/json,.json" hidden>
+        </div>
+      </div>
+      <p class="dica">Cada OKR tem um código (o que vai no CSV, ex.: A) e seus KRs. Nas entregas, você escolhe o OKR e o KR que ela move. OKR ou KR usado por alguma entrega não pode ser removido.</p>
+      <div class="okrs-cadastro" id="okrs-cadastro"></div>
+      <div class="acoes-form">
+        <button type="button" id="btn-adicionar-objetivo" class="secundario">+ Adicionar OKR</button>
+        <button type="button" id="btn-salvar-okrs">Salvar OKRs</button>
+        <span class="dica" id="okrs-status"></span>
+      </div>
+    </section>
+
+    <!-- Cadastro do PDI: mesmos campos e chaves do JSON do site da gestora (ver pdi.ts). -->
+    <section class="cartao">
+      <div class="cabecalho-tabela">
+        <h2>PDI</h2>
+        <div class="acoes-dados">
+          <button type="button" id="btn-exportar-pdi" class="secundario">Exportar JSON do PDI</button>
+          <label class="botao secundario" for="importar-pdi">Importar JSON como nova versão</label>
+          <input type="file" id="importar-pdi" accept="application/json,.json" hidden>
+        </div>
+      </div>
+      <p class="dica">Os gaps e as experiências viram os pontos que cada entrega pode mover. Cada PDI novo entra como uma nova versão, e as entregas guardam a versão que refletem. Fica salvo neste navegador.</p>
+      <!-- Versões salvas, da mais recente para a mais antiga, em cartões: clicar abre a versão no formulário (ver pdi.ts). -->
+      <div class="pdi-versoes-painel">
+        <div class="pdi-versoes-cabecalho">
+          <strong>Versões do PDI</strong>
+          <div class="acoes-dados">
+            <button type="button" id="btn-nova-versao-pdi" class="secundario">+ Nova versão (copiar a aberta)</button>
+            <button type="button" id="btn-excluir-versao-pdi" class="perigo">Excluir versão aberta</button>
+          </div>
+        </div>
+        <div class="pdi-versoes-cartoes" id="pdi-versoes-cartoes" role="group" aria-label="Versões do PDI"></div>
+        <p class="dica" id="pdi-versao-aberta"></p>
+      </div>
+      <form id="form-pdi" class="form-pdi" novalidate>
+        <!-- Seções e campos criados por pdi.ts. -->
+        <div id="pdi-campos"></div>
+        <div class="acoes-form">
+          <button type="submit" id="btn-salvar-pdi">Salvar PDI</button>
+          <span class="dica" id="pdi-status"></span>
+        </div>
+      </form>
     </section>
     </div>
   </main>

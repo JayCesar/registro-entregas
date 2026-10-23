@@ -7,10 +7,12 @@
 // Formato: ver exemplos/entregas-exemplo.csv. Resumo:
 // - separador ";" ou "," (detectado pelo cabeçalho); UTF-8 ou Windows-1252 (Excel);
 // - datas em aaaa-mm-dd ou dd/mm/aaaa;
-// - OKRs em trios de colunas numeradas: okr1, okr1Grau, okr1Motivo, okr2...;
-// - siglas separadas por "|" na mesma célula;
+// - OKRs em trios de colunas numeradas: okr1, okr1Grau, okr1Motivo, okr2...,
+//   com okr1Kr opcional (código do KR; em branco = o OKR como um todo);
+// - siglas, camadas, servicosAws, microsservicos e pessoas separados por "|" na mesma célula;
 // - id opcional: se preenchido, reimportar o arquivo atualiza em vez de duplicar;
-// - squads e siglas que ainda não existem são aceitas e passam a existir.
+// - squads, siglas, serviços AWS e microsserviços que ainda não existem são
+//   aceitos e passam a existir. Camadas só da lista fixa (config.ts).
 
 // ---------- Colunas ----------
 
@@ -29,11 +31,16 @@ const COLUNAS_CSV_OBRIGATORIAS = [
 const COLUNAS_CSV_OPCIONAIS = [
   "id",
   "siglas",
+  "camadas",
+  "servicosAws",
+  "microsservicos",
+  "pessoas",
   "impeditivo",
   "classificacao",
   "bcp",
   "complexidade",
   "gmudNome",
+  "gmudTitulo",
   "gmudLink",
   "git",
   "linkPr",
@@ -47,12 +54,13 @@ const COLUNAS_CSV_TEXTO = [
   "impeditivo",
   "bcp",
   "gmudNome",
+  "gmudTitulo",
   "gmudLink",
   "linkPr",
   "linkActions",
 ] as const;
 
-const COLUNA_OKR = /^okr(\d+)(grau|motivo)?$/;
+const COLUNA_OKR = /^okr(\d+)(grau|motivo|kr)?$/;
 
 const MAXIMO_ERROS_EXIBIDOS = 10;
 
@@ -213,13 +221,37 @@ function formDataDaLinha(linha: LinhaCsv, numerosOkr: number[], erros: Erros): F
     else erros.siglas = `Sigla desconhecida: "${informada}" (opções: ${siglas.join(", ")}).`;
   }
 
+  // Lista fixa: valor fora dela é erro. Coluna ausente ou vazia é aceita (planilhas antigas).
+  for (const camada of valor("camadas").split("|")) {
+    const informada = camada.trim();
+    if (!informada) continue;
+    const encontrada = canonico(CAMADAS, informada);
+    if (pertence(CAMADAS, encontrada)) dados.append("camadas", encontrada);
+    else erros.camadas = `Camada desconhecida: "${informada}" (opções: ${CAMADAS.join(", ")}).`;
+  }
+  // Novos já viraram opção em registrosDoCsv: aqui só pega a grafia cadastrada.
+  for (const [coluna, disponiveis] of [
+    ["servicosAws", servicosAwsDisponiveis],
+    ["microsservicos", microsservicosDisponiveis],
+    ["pessoas", pessoasDisponiveis],
+  ] as const) {
+    for (const item of valor(coluna).split("|")) {
+      const informado = item.trim();
+      if (informado) dados.append(coluna, canonico(disponiveis(), informado));
+    }
+  }
+
   for (const numero of numerosOkr) {
     const okr = valor(`okr${numero}`);
     const grau = valor(`okr${numero}Grau`);
     const motivo = valor(`okr${numero}Motivo`);
+    const kr = valor(`okr${numero}Kr`);
     // Trio todo em branco = a entrega não tem esse OKR.
     if (!okr && !grau && !motivo) continue;
-    dados.append("okr", canonico(OKRS, okr));
+    const codigo = canonico(okrsDisponiveis(), okr);
+    dados.append("okr", codigo);
+    // KR opcional ("KR1", "kr1"...): em branco = o OKR como um todo.
+    dados.append("okrKr", kr ? canonico(objetivoDe(codigo)?.krs.map((k) => k.codigo) ?? [], kr) : "");
     dados.append("okrGrau", canonico(GRAUS_IMPACTO, grau));
     dados.append("okrMotivo", motivo);
   }
@@ -260,6 +292,22 @@ function registrosDoCsv(conteudo: string): { registros: Registro[]; erros: strin
         opcoesDoCsvEmLeitura.siglas.add(informada);
       }
     }
+    for (const [coluna, disponiveis] of [
+      ["servicosaws", servicosAwsDisponiveis],
+      ["microsservicos", microsservicosDisponiveis],
+      ["pessoas", pessoasDisponiveis],
+    ] as const) {
+      const posicao = cabecalho.indexOf(coluna);
+      const novos = {
+        servicosaws: opcoesDoCsvEmLeitura.servicosAws,
+        microsservicos: opcoesDoCsvEmLeitura.microsservicos,
+        pessoas: opcoesDoCsvEmLeitura.pessoas,
+      }[coluna];
+      for (const item of (posicao >= 0 ? (campos[posicao] ?? "") : "").split("|")) {
+        const informado = item.trim();
+        if (informado && !encontrarOpcaoSemAcento(disponiveis(), informado)) novos.add(informado);
+      }
+    }
   }
 
   try {
@@ -267,6 +315,9 @@ function registrosDoCsv(conteudo: string): { registros: Registro[]; erros: strin
   } finally {
     opcoesDoCsvEmLeitura.squads.clear();
     opcoesDoCsvEmLeitura.siglas.clear();
+    opcoesDoCsvEmLeitura.servicosAws.clear();
+    opcoesDoCsvEmLeitura.microsservicos.clear();
+    opcoesDoCsvEmLeitura.pessoas.clear();
   }
 
   return { registros: importados, erros };
@@ -294,7 +345,7 @@ function lerLinhasDoCsv(
     const errosLinha: Erros = {};
     if (campos.length > cabecalho.length) errosLinha.colunas = "Há mais células do que colunas no cabeçalho.";
 
-    const resultado = validar(formDataDaLinha(linha, numerosOkr, errosLinha));
+    const resultado = validar(formDataDaLinha(linha, numerosOkr, errosLinha), false);
     // Os erros da conversão (data inválida etc.) são mais específicos que os de validar().
     if (!resultado.ok) Object.assign(errosLinha, { ...resultado.erros, ...errosLinha });
 

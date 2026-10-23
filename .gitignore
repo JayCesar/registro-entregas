@@ -9,3 +9,6 @@ dados/*
 
 # Imagens de referência de design usadas durante o desenvolvimento.
 /image*.png
+
+# Fotos/arquivos reais do PDI usados como referência: nunca no GitHub.
+pdi/
