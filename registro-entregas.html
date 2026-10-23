@@ -1292,21 +1292,6 @@ main {
   border-radius: 22px;
 }
 
-.trilho-marca {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 14px;
-  color: var(--sobre-destaque);
-  background: var(--destaque);
-  border-radius: 50%;
-}
-
-.trilho-marca .icone {
-  stroke-width: 2.4;
-}
-
 .trilho-nav {
   display: flex;
   flex-direction: column;
@@ -1408,6 +1393,29 @@ button.trilho-botao.ativa {
 body[data-aba="edicao"] .trilho-nav a.ativa {
   color: var(--texto-suave);
   background: transparent;
+}
+
+/* Visão geral: botão de destaque no topo do trilho, sempre na cor de destaque. */
+.trilho-nav a.trilho-inicio,
+body[data-aba="edicao"] .trilho-nav a.trilho-inicio {
+  margin-bottom: 14px;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-radius: 50%;
+}
+
+.trilho-nav a.trilho-inicio:hover {
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  filter: brightness(1.08);
+}
+
+.trilho-nav a.trilho-inicio.ativa {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destaque) 35%, transparent);
+}
+
+.trilho-inicio .icone {
+  stroke-width: 2.4;
 }
 
 /* Rótulo flutuante ao passar o mouse ou focar pelo teclado. */
@@ -2090,9 +2098,12 @@ button.hero-explorar .icone {
     padding: 8px;
   }
 
-  .trilho-marca,
   .trilho-rotulo {
     display: none;
+  }
+
+  .trilho-nav a.trilho-inicio {
+    margin-bottom: 0;
   }
 
   .trilho-nav {
@@ -4011,9 +4022,9 @@ body[data-publicado] #btn-bloquear {
   <!-- Trilho lateral: navegação entre as seções do dashboard e atalho para a edição.
        Os ícones são preenchidos por icones.ts a partir de data-icone. -->
   <aside class="trilho" aria-label="Navegação">
-    <div class="trilho-marca" aria-hidden="true"><span data-icone="marca"></span></div>
     <nav class="trilho-nav" id="trilho-nav">
-      <a href="#sec-visao" title="Visão geral"><span data-icone="grade"></span><span class="trilho-rotulo">Visão geral</span></a>
+      <!-- Em destaque no topo do trilho: leva à visão geral do dashboard (de qualquer aba). -->
+      <a href="#sec-visao" class="trilho-inicio" title="Visão geral"><span data-icone="grade"></span><span class="trilho-rotulo">Visão geral</span></a>
       <a href="#sec-indicadores" title="Indicadores"><span data-icone="medidor"></span><span class="trilho-rotulo">Indicadores</span></a>
       <a href="#sec-volumetria" title="Volumetria"><span data-icone="barras"></span><span class="trilho-rotulo">Volumetria</span></a>
       <a href="#sec-impacto" title="Impacto"><span data-icone="alvo"></span><span class="trilho-rotulo">Impacto</span></a>
@@ -6582,7 +6593,6 @@ exibirFoto();
 // deste arquivo (nunca dados do usuário), por isso podem ir via innerHTML.
 // No HTML, qualquer <span data-icone="nome"> recebe o ícone ao carregar.
 const ICONES = {
-    marca: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/>',
     grade: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/>' +
         '<rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
     medidor: '<path d="M3.3 19a10 10 0 1 1 17.4 0"/><path d="m12 14 4-4"/>',

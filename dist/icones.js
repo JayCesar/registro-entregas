@@ -3,7 +3,6 @@
 // deste arquivo (nunca dados do usuário), por isso podem ir via innerHTML.
 // No HTML, qualquer <span data-icone="nome"> recebe o ícone ao carregar.
 const ICONES = {
-    marca: '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/>',
     grade: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/>' +
         '<rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
     medidor: '<path d="M3.3 19a10 10 0 1 1 17.4 0"/><path d="m12 14 4-4"/>',
