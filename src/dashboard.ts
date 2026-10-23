@@ -92,6 +92,12 @@ let registrosFiltrados: Registro[] = [];
 
 const anoDe = (registro: Registro): string => registro.dataFim.slice(0, 4);
 
+// Entregas de anos anteriores a ANO_INICIAL (ex.: dados antigos ainda no
+// navegador) ficam fora do dashboard. Na aba de edição elas continuam visíveis.
+function registrosNoFoco(): Registro[] {
+  return registros.filter((r) => Number(anoDe(r)) >= ANO_INICIAL);
+}
+
 // Identifica a release junto com o ano (os números se repetem a cada ano). "" = sem release.
 function chaveRelease(registro: Registro): string {
   return registro.release ? `${anoDe(registro)}-${registro.release}` : "";
@@ -160,7 +166,7 @@ function aplicarFiltro(mudanca: Partial<FiltrosDashboard>): void {
 
 // Os anos vêm dos dados (mais o atual); por isso os chips são refeitos a cada renderização.
 function renderizarFiltros(): void {
-  const anos = [...new Set([ANO_ATUAL, ...registros.map(anoDe)])].sort().reverse();
+  const anos = [...new Set([ANO_ATUAL, ...registrosNoFoco().map(anoDe)])].sort().reverse();
   if (filtros.ano && !anos.includes(filtros.ano)) filtros.ano = "";
 
   renderizarChips(
@@ -1376,7 +1382,7 @@ function renderizarDashboard(): void {
   renderizarFiltros();
 
   // Os filtros se combinam (E lógico), do mais amplo (ano) ao mais fino (sprint).
-  registrosDaSelecao = registros.filter(
+  registrosDaSelecao = registrosNoFoco().filter(
     (r) =>
       (!filtros.ano || anoDe(r) === filtros.ano) &&
       (!filtros.release || r.release === filtros.release) &&
@@ -1397,7 +1403,7 @@ function renderizarDashboard(): void {
   dashVazio.hidden = !vazio;
   dashConteudo.hidden = vazio;
   if (vazio) {
-    if (registros.length === 0) {
+    if (registrosNoFoco().length === 0) {
       dashVazioTexto.textContent =
         "Ainda não há entregas registradas. Assim que houver, os números aparecem aqui.";
     } else if (filtrosNoPadrao()) {

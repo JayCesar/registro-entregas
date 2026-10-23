@@ -116,8 +116,8 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `squad` | **sim** | nome da squad; uma squad nova é aceita e passa a existir | `Squad Alfa` |
 | `siglas` | não | separadas por `\|`; siglas novas são aceitas (ficam em maiúsculas) | `FT5\|JQ9` |
 | `dataInicio` | **sim** | `aaaa-mm-dd` ou `dd/mm/aaaa` | `03/11/2026` |
-| `dataFim` | **sim** | igual; não pode ser antes do início. **O ano da entrega vem daqui** | `21/11/2026` |
-| `release` | **sim** | `1` a `4` (ou `R1` a `R4`). R1 = jan–mar, R2 = abr–jun, R3 = jul–set, R4 = out–dez | `4` |
+| `dataFim` | **sim** | igual; não pode ser antes do início. **O ano e a release vêm daqui**; só datas a partir de 2026 | `21/11/2026` |
+| `release` | **sim** | `1` a `4` (ou `R1` a `R4`), **igual ao trimestre da `dataFim`**: R1 = jan–mar, R2 = abr–jun, R3 = jul–set, R4 = out–dez | `4` |
 | `sprint` | **sim** | `1` a `4` (ou `S1` a `S4`) | `2` |
 | `impeditivo` | não | texto; em branco = não houve | `Ambiente de homologação fora do ar` |
 | `classificacao` | só para **História** | `funcional` ou `nao-funcional` | `funcional` |
@@ -133,7 +133,12 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `okr1Motivo` | **sim** | por que a entrega impacta esse OKR | `Reduz chamadas ao atendimento` |
 | `okr2…`, `okr3…` | não | mesmo trio para mais OKRs. Precisa de mais? Crie `okr4`, `okr4Grau`, `okr4Motivo` | |
 
-Os OKRs, a senha da aba de edição e as listas iniciais de squads e siglas ficam em `src/config.ts`. Depois de alterar, rode `npm run build`.
+**Duas regras valem para o formulário, o CSV e o JSON:**
+
+- **A release é a do trimestre da data de fim.** Uma entrega com fim em outubro só pode ser R4; se vier como R1, a linha é recusada com o motivo. No formulário, escolher a data de fim já preenche a release.
+- **Só entram entregas com data de fim a partir de 2026** (`ANO_INICIAL` em `src/config.ts`). Entregas mais antigas que já estejam no navegador ficam fora do dashboard, mas continuam na tabela da aba Edição, onde podem ser excluídas.
+
+Os OKRs, a senha da aba de edição, o `ANO_INICIAL` e as listas iniciais de squads e siglas ficam em `src/config.ts`. Depois de alterar, rode `npm run build`.
 
 ---
 
@@ -183,8 +188,8 @@ O arquivo é uma **lista** `[ ... ]` com um objeto por entrega:
 | `assunto`, `descricao` | **sim** | texto |
 | `squad` | **sim** | texto; squad nova é aceita |
 | `siglas` | **sim** | lista de textos; `[]` se não houver |
-| `dataInicio`, `dataFim` | **sim** | `"aaaa-mm-dd"`; o fim não pode ser antes do início |
-| `release`, `sprint` | não | `"1"` a `"4"` **como texto** (entre aspas) |
+| `dataInicio`, `dataFim` | **sim** | `"aaaa-mm-dd"`; o fim não pode ser antes do início; só datas de fim a partir de 2026 |
+| `release`, `sprint` | não | `"1"` a `"4"` **como texto** (entre aspas). A `release` tem que ser a do trimestre da `dataFim` |
 | `okrs` | não | lista de `{ "okr": "A", "grau": "Alto", "motivo": "..." }`; `okr` em `A`, `B`, `C` e `grau` em `Baixo`, `Médio`, `Alto` |
 | `impeditivo` | não | texto; `""` ou ausente = não houve |
 | `historia` | não | só para História: `{ "funcional": true, "bcp": "...", "complexidade": 5 }` ou `{ "funcional": false }` |

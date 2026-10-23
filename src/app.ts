@@ -187,6 +187,29 @@ function rotuloReleaseSprint(registro: Registro): string {
   return `${rotuloRelease(registro)} · S${registro.sprint}`;
 }
 
+// Release do trimestre da data (aaaa-mm-dd): outubro -> "4".
+function releaseDaData(iso: string): Release {
+  const mes = Number(iso.slice(5, 7));
+  return RELEASES[Math.floor((mes - 1) / MESES_POR_RELEASE)] ?? RELEASES[0];
+}
+
+// Mesmas regras de data para o formulário, o CSV e o JSON. Devolve a mensagem
+// do problema ou null. `release` vazia/nula não é checada aqui.
+function erroDeDataERelease(dataFim: string, release: string | null): string | null {
+  if (Number(dataFim.slice(0, 4)) < ANO_INICIAL) {
+    return `Só entram entregas a partir de ${ANO_INICIAL} (data de fim ${formatarData(dataFim)}).`;
+  }
+  const esperada = releaseDaData(dataFim);
+  if (release && release !== esperada) {
+    // mesesDaRelease está em dashboard.ts (mesmo escopo global; só roda depois de tudo carregado).
+    return (
+      `Release R${release} não bate com a data de fim ${formatarData(dataFim)}, ` +
+      `que cai na R${esperada} (${mesesDaRelease(esperada)}).`
+    );
+  }
+  return null;
+}
+
 function gerarId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -245,6 +268,11 @@ function validar(dados: FormData): Validacao {
   } else if (dataInicio && dataFim < dataInicio) {
     // Datas ISO (yyyy-mm-dd) ordenam corretamente como string.
     erros.dataFim = "A data de fim não pode ser anterior à data de início.";
+  } else {
+    const erro = erroDeDataERelease(dataFim, pertence(RELEASES, release) ? release : null);
+    // Ano fora do foco é problema da data; release de outro trimestre, da release.
+    if (erro?.startsWith("Só entram")) erros.dataFim = erro;
+    else if (erro) erros.release = erro;
   }
 
   let historia: DetalheHistoria | null = null;
@@ -829,6 +857,8 @@ function errosDoRegistroJson(r: RegistroSalvo, posicao: number): string[] {
   if (!r.assunto.trim()) erros.push(`${onde}: assunto vazio.`);
   if (!r.squad.trim()) erros.push(`${onde}: squad vazia.`);
   if (r.dataFim < r.dataInicio) erros.push(`${onde}: dataFim antes de dataInicio.`);
+  const erroDeData = erroDeDataERelease(r.dataFim, r.release ?? null);
+  if (erroDeData) erros.push(`${onde}: ${erroDeData}`);
   if (r.release != null && !pertence(RELEASES, r.release)) {
     erros.push(`${onde}: release "${r.release}" inválida. Use: ${lista(RELEASES)} (como texto).`);
   }
@@ -923,6 +953,12 @@ filtroSprint.append(new Option("Sem sprint", "sem"));
 preencherSquadsESiglas();
 criarCadastroRapido(el("nova-squad"), "Nova squad", cadastrarSquad);
 criarCadastroRapido(el("nova-sigla"), "Nova sigla", cadastrarSigla);
+
+// A release segue o trimestre da data de fim: escolher a data já preenche a release.
+el<HTMLInputElement>("dataFim").addEventListener("change", (evento) => {
+  const data = (evento.target as HTMLInputElement).value;
+  if (data) campoRelease.value = releaseDaData(data);
+});
 
 formulario.addEventListener("submit", aoEnviar);
 formulario.addEventListener("input", atualizarCamposCondicionais);

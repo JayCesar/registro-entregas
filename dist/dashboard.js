@@ -66,6 +66,11 @@ let filtros = { ...FILTROS_PADRAO };
 let registrosDaSelecao = [];
 let registrosFiltrados = [];
 const anoDe = (registro) => registro.dataFim.slice(0, 4);
+// Entregas de anos anteriores a ANO_INICIAL (ex.: dados antigos ainda no
+// navegador) ficam fora do dashboard. Na aba de edição elas continuam visíveis.
+function registrosNoFoco() {
+    return registros.filter((r) => Number(anoDe(r)) >= ANO_INICIAL);
+}
 // Identifica a release junto com o ano (os números se repetem a cada ano). "" = sem release.
 function chaveRelease(registro) {
     return registro.release ? `${anoDe(registro)}-${registro.release}` : "";
@@ -116,7 +121,7 @@ function aplicarFiltro(mudanca) {
 }
 // Os anos vêm dos dados (mais o atual); por isso os chips são refeitos a cada renderização.
 function renderizarFiltros() {
-    const anos = [...new Set([ANO_ATUAL, ...registros.map(anoDe)])].sort().reverse();
+    const anos = [...new Set([ANO_ATUAL, ...registrosNoFoco().map(anoDe)])].sort().reverse();
     if (filtros.ano && !anos.includes(filtros.ano))
         filtros.ano = "";
     renderizarChips(dashAno, [...anos.map((ano) => [ano, ano]), ["Todos", ""]], filtros.ano, (ano) => aplicarFiltro({ ano }));
@@ -962,7 +967,7 @@ function renderizarDashboard() {
     // Os dados podem ter mudado na aba de edição: refaz as opções de release.
     renderizarFiltros();
     // Os filtros se combinam (E lógico), do mais amplo (ano) ao mais fino (sprint).
-    registrosDaSelecao = registros.filter((r) => (!filtros.ano || anoDe(r) === filtros.ano) &&
+    registrosDaSelecao = registrosNoFoco().filter((r) => (!filtros.ano || anoDe(r) === filtros.ano) &&
         (!filtros.release || r.release === filtros.release) &&
         (!filtros.sprint || r.sprint === filtros.sprint));
     // O tipo escolhido pode ter sumido da seleção ao mudar outro filtro: volta para todos.
@@ -979,7 +984,7 @@ function renderizarDashboard() {
     dashVazio.hidden = !vazio;
     dashConteudo.hidden = vazio;
     if (vazio) {
-        if (registros.length === 0) {
+        if (registrosNoFoco().length === 0) {
             dashVazioTexto.textContent =
                 "Ainda não há entregas registradas. Assim que houver, os números aparecem aqui.";
         }

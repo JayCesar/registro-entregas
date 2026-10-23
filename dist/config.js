@@ -20,7 +20,11 @@ const RELEASES = ["1", "2", "3", "4"];
 const SPRINTS = ["1", "2", "3", "4"];
 // Cada release dura um trimestre do ano (R1 = jan a mar...) e tem 4 sprints.
 // Usado nos rótulos do filtro e no gráfico mensal do dashboard.
+// A release é sempre a do trimestre da data de fim (validado no cadastro e nas importações).
 const MESES_POR_RELEASE = 3;
+// Primeiro ano acompanhado: entregas com data de fim anterior não são aceitas
+// e, se já existirem no navegador, ficam fora do dashboard.
+const ANO_INICIAL = 2026;
 // PROTEÇÃO PROVISÓRIA: senha fixa da aba de edição. Ela fica visível no
 // código-fonte e os dados continuam legíveis no localStorage, então isso só
 // evita edição acidental, não é segurança de verdade. Troque aqui quando quiser.
