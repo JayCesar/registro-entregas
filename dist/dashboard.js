@@ -973,6 +973,8 @@ function abrirDetalhesEntrega(registro) {
     adicionarDetalhe(detalhes, "Alteração em Git", git ? "Sim" : "Não");
     corpo.append(criarSecaoEntrega("Ficha", detalhes));
     const links = criarElemento("div", "entrega-links");
+    if (registro.itemPortal)
+        links.append(criarLink(registro.itemPortal.link, `Item no portal${registro.itemPortal.nome ? ` (${registro.itemPortal.nome})` : ""}`));
     if (gmud?.link)
         links.append(criarLink(gmud.link, `GMUD ${gmud.nome}`));
     if (gmud?.evidencias)
@@ -1009,6 +1011,7 @@ function textoPesquisavel(registro) {
     return normalizar([
         registro.tipo,
         registro.assunto,
+        registro.itemPortal?.nome ?? "",
         registro.descricao,
         registro.squad,
         ...registro.siglas,

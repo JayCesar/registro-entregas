@@ -1395,6 +1395,7 @@ function abrirDetalhesEntrega(registro: Registro): void {
   corpo.append(criarSecaoEntrega("Ficha", detalhes));
 
   const links = criarElemento("div", "entrega-links");
+  if (registro.itemPortal) links.append(criarLink(registro.itemPortal.link, `Item no portal${registro.itemPortal.nome ? ` (${registro.itemPortal.nome})` : ""}`));
   if (gmud?.link) links.append(criarLink(gmud.link, `GMUD ${gmud.nome}`));
   if (gmud?.evidencias) links.append(criarLink(gmud.evidencias, "Evidências da GMUD"));
   if (git?.linkPullRequest) links.append(criarLink(git.linkPullRequest, "Pull Request"));
@@ -1433,6 +1434,7 @@ function textoPesquisavel(registro: Registro): string {
     [
       registro.tipo,
       registro.assunto,
+      registro.itemPortal?.nome ?? "",
       registro.descricao,
       registro.squad,
       ...registro.siglas,
