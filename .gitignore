@@ -6,6 +6,9 @@ publicar/
 # Dados reais das entregas: ficam só no seu PC, nunca no GitHub.
 dados/*
 !dados/modelo-entregas.csv
+# PDI para importar no PC do banco (aba Edição > PDI > Importar JSON como nova versão).
+# Publicado de propósito, a pedido do dono: o repositório é público.
+!dados/pdi-julio-2026-10-09.json
 
 # Imagens de referência de design usadas durante o desenvolvimento.
 /image*.png
