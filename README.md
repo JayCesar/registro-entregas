@@ -38,7 +38,7 @@ Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos
 
 1. Abra o Bloco de Notas, cole a linha abaixo e salve como `entregas.csv` (Tipo: *Todos os arquivos*, Codificação: *UTF-8*):
    ```
-   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;complexidade;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo
+   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo;gmudEvidencias
    ```
 2. Abra o `entregas.csv` no Excel. Cada nome vira uma coluna, porque o `;` é o separador padrão do Excel em pt-BR.
 3. Preencha uma linha por entrega. O formato de cada coluna está na seção 3.
@@ -215,8 +215,8 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `sprint` | **sim** | `1` a `4` (ou `S1` a `S4`) | `2` |
 | `impeditivo` | não | texto; em branco = não houve | `Ambiente de homologação fora do ar` |
 | `classificacao` | só para **História** | `funcional` ou `nao-funcional` | `funcional` |
-| `bcp` | só para História **funcional** | texto | `BCP-1042` |
-| `complexidade` | não (História, funcional ou não) | número (aceita vírgula) | `3,5` |
+| `bcp` | só para História **funcional** | BCP-Score: um número (aceita vírgula) | `82` |
+| `complexidade` | — | campo removido: a coluna ainda é aceita, mas é ignorada | |
 | `gmudNome` | não (História/Bug) | número da GMUD | `GMUD-48211` |
 | `gmudLink` | não | URL `https://...`; exige `gmudNome` | `https://gmud.empresa/48211` |
 | `git` | não | `sim` ou `nao` (em branco = `nao`) | `sim` |
@@ -232,6 +232,7 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `microsservicos` | não | criados ou alterados, separados por `\|`; novos são aceitos e passam a existir | `ms-reservas` |
 | `pessoas` | não | pessoas envolvidas, separadas por `\|`; novas são aceitas. Só aparecem na aba Edição (nunca no dashboard nem na página publicada) | `Italo\|Thales` |
 | `gmudTitulo` | não | nome da GMUD (exige `gmudNome`, que é o número) | `Ajuste no fluxo de reservas` |
+| `gmudEvidencias` | não no CSV (**sim** no formulário quando há GMUD) | URL `https://...` da pasta/documento com as evidências da GMUD | `https://drive.empresa/gmud-48211` |
 
 **Duas regras valem para o formulário, o CSV e o JSON:**
 
@@ -328,9 +329,9 @@ Por que a página é **um arquivo só**: o link pré-assinado vale para um únic
 
 ## 4.0 OKRs e KRs
 
-- **Cadastro:** aba Edição → cartão **OKRs e KRs**. Cada OKR tem um **código** (o que vai no CSV e nas entregas, ex.: `A`), o **objetivo** e os **KRs** (código, ex.: `KR1`, e descrição). Sem nada cadastrado, valem `A`, `B` e `C` de `src/config.ts`.
-- **Na entrega:** cada OKR é um bloco que abre e fecha. Dentro dele, escolha **Não impacta**, **OKR como um todo** ou um **KR**, e depois o grau e o motivo. É preciso ao menos um OKR.
-- **Proteções:** códigos repetidos não são aceitos, e um OKR ou KR usado por alguma entrega não pode ser removido.
+- **Cadastro:** aba Edição → cartão **OKRs e KRs**, organizado em **objetivo** (ex.: Cliente) → **OKRs** (nome + código) → **KRs** (KR1, KR2…). O código do OKR (`A`, `B`…) é preenchido sozinho e é o que vai no CSV e nas entregas. Começa vazio: clique em **+ Novo objetivo**.
+- **Na entrega:** os OKRs aparecem agrupados pelo objetivo; cada OKR é um bloco que abre e fecha. Dentro dele, escolha **Não impacta**, **OKR como um todo** ou um **KR**, e depois o grau e o motivo. É preciso ao menos um OKR.
+- **Proteções:** códigos repetidos não são aceitos. Se alguma entrega usa um OKR ou KR que saiu do cadastro, o app avisa (quantas entregas por OKR) e pede confirmação; essas entregas mantêm o código e aparecem como "Fora do cadastro" até serem editadas.
 - **Dashboard:** a seção 04 mostra o título de cada OKR e, no detalhe, quantas entregas há em cada KR. A página gerada pelo botão "Gerar página para o S3" leva o cadastro junto.
 - **Backup:** **Exportar/Importar JSON** no próprio cartão.
 

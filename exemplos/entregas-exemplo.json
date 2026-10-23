@@ -15,7 +15,7 @@
       { "okr": "B", "grau": "Médio", "motivo": "Aumenta o volume transacionado pelo app" }
     ],
     "impeditivo": "",
-    "historia": { "funcional": true, "bcp": "BCP-1077", "complexidade": 8 },
+    "historia": { "funcional": true, "bcp": "76" },
     "gmud": { "nome": "GMUD-49388", "link": "https://gmud.exemplo.com.br/49388" },
     "git": {
       "linkPullRequest": "https://github.com/exemplo/transferencias-api/pull/419",

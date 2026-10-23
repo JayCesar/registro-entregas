@@ -3484,6 +3484,20 @@ button.modal-fechar {
   border-color: color-mix(in srgb, var(--tipo-discovery) 45%, transparent);
 }
 
+/* Nome e evidências da GMUD: linha inteira, dois campos lado a lado. */
+.gmud-extra {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .gmud-extra {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---------- Busca da tabela de registros ---------- */
 
 /* Mesma barra da busca do dashboard, numa linha só, logo abaixo do título. */
@@ -3542,10 +3556,60 @@ button.modal-fechar {
   color: var(--cor-tipo);
 }
 
+/* Seletor da entrega: OKRs agrupados pelo objetivo. */
+.okr-grupo {
+  display: grid;
+  gap: 8px;
+}
+
+.okr-grupo-titulo,
+.okr-objetivo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.okr-grupo + .okr-grupo {
+  margin-top: 8px;
+}
+
+/* Cadastro: um bloco por objetivo, com os cartões dos OKRs dele dentro. */
+.objetivo-cadastro {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.objetivo-cadastro-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.objetivo-cadastro-topo .campo {
+  flex: 1 1 260px;
+}
+
+.objetivo-cadastro-topo .objetivo-nome {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.okrs-do-objetivo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+  gap: 12px;
+}
+
 /* Cadastro: um cartão por OKR, com a cor dele na borda e os KRs em linhas. */
 .okrs-cadastro {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
   gap: 14px;
   margin: 14px 0;
 }
@@ -3556,6 +3620,7 @@ button.modal-fechar {
   gap: 10px;
   margin: 0;
   padding: 16px;
+  background: var(--cartao);
   border: 1px solid var(--borda);
   border-top: 4px solid var(--cor-okr);
   border-radius: var(--raio);
@@ -4354,19 +4419,13 @@ body[data-publicado] #btn-bloquear {
             <small class="erro" data-erro="classificacao"></small>
           </fieldset>
 
-          <!-- Para toda História, funcional ou não -->
-          <div class="campo">
-            <label for="complexidade">Complexidade</label>
-            <input type="number" id="complexidade" name="complexidade" min="0" step="any">
-            <small class="erro" data-erro="complexidade"></small>
-          </div>
         </div>
 
         <!-- Só para História funcional -->
         <div class="grade" id="sec-funcional" hidden>
           <div class="campo">
-            <label for="bcp">BCP *</label>
-            <input type="text" id="bcp" name="bcp">
+            <label for="bcp">BCP-Score *</label>
+            <input type="number" id="bcp" name="bcp" step="any" placeholder="Ex.: 82">
             <small class="erro" data-erro="bcp"></small>
           </div>
         </div>
@@ -4453,9 +4512,17 @@ body[data-publicado] #btn-bloquear {
           </div>
 
           <!-- Só quando há número de GMUD -->
-          <div class="campo largo" id="sec-gmud-titulo" hidden>
-            <label for="gmudTitulo">Nome da GMUD</label>
-            <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
+          <div class="gmud-extra" id="sec-gmud-titulo" hidden>
+            <div class="campo">
+              <label for="gmudTitulo">Nome da GMUD</label>
+              <input type="text" id="gmudTitulo" name="gmudTitulo" placeholder="Ex.: Ajuste no fluxo de reservas do portal">
+            </div>
+
+            <div class="campo">
+              <label for="gmudEvidencias">Link das evidências *</label>
+              <input type="url" id="gmudEvidencias" name="gmudEvidencias" placeholder="https://... (pasta ou documento com as evidências)">
+              <small class="erro" data-erro="gmudEvidencias"></small>
+            </div>
           </div>
         </div>
 
@@ -4542,8 +4609,7 @@ body[data-publicado] #btn-bloquear {
               <th>Assunto</th>
               <th>Descrição</th>
               <th>Classificação</th>
-              <th>BCP</th>
-              <th>Complexidade</th>
+              <th>BCP-Score</th>
               <th>GMUD</th>
               <th>OKRs impactados</th>
               <th>PDI</th>
@@ -4562,6 +4628,7 @@ body[data-publicado] #btn-bloquear {
               <th>Git</th>
               <th>Pull Request</th>
               <th>Actions</th>
+              <th>Evidências</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -4580,10 +4647,10 @@ body[data-publicado] #btn-bloquear {
           <input type="file" id="importar-okrs" accept="application/json,.json" hidden>
         </div>
       </div>
-      <p class="dica">Cada OKR tem um código (o que vai no CSV, ex.: A) e seus KRs. Nas entregas, você escolhe o OKR e o KR que ela move. OKR ou KR usado por alguma entrega não pode ser removido.</p>
+      <p class="dica">Organize por <strong>objetivo</strong> (ex.: Cliente). Cada objetivo tem seus <strong>OKRs</strong>, e cada OKR tem os <strong>KRs</strong> (KR1, KR2…). O código do OKR (A, B…) é preenchido sozinho e é o que vai no CSV. Se alguma entrega usar um OKR que saiu do cadastro, o app avisa antes de salvar.</p>
       <div class="okrs-cadastro" id="okrs-cadastro"></div>
       <div class="acoes-form">
-        <button type="button" id="btn-adicionar-objetivo" class="secundario">+ Adicionar OKR</button>
+        <button type="button" id="btn-adicionar-objetivo" class="secundario">+ Novo objetivo</button>
         <button type="button" id="btn-salvar-okrs">Salvar OKRs</button>
         <span class="dica" id="okrs-status"></span>
       </div>
@@ -4633,9 +4700,9 @@ body[data-publicado] #btn-bloquear {
 // compilador acompanha a mudança sozinho.
 // Squads e siglas são só as opções iniciais: novas podem ser cadastradas no
 // próprio formulário (ver squadsDisponiveis/siglasDisponiveis em app.ts).
-// OKRs iniciais: valem enquanto nenhum for cadastrado na aba de edição
-// (cartão "OKRs e KRs", ver okrs.ts). Depois, a lista vem do cadastro.
-const OKRS = ["A", "B", "C"];
+// OKRs iniciais: começa vazia. Os OKRs vêm do cadastro na aba de edição
+// (cartão "OKRs e KRs", ver okrs.ts).
+const OKRS = [];
 // Cor de cada OKR (cartões do dashboard e seletor do formulário), em rodízio pela ordem do cadastro.
 const CORES_OKR = ["var(--okr-1)", "var(--okr-2)", "var(--okr-3)", "var(--okr-4)"];
 const SIGLAS = ["FT5", "JQ9"];
@@ -4894,8 +4961,9 @@ function gerarId() {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 // ---------- Validação ----------
-// `exigirCamada` = false no CSV: planilhas de antes da coluna "camadas" continuam válidas.
-function validar(dados, exigirCamada = true) {
+// `regrasDoFormulario` = false no CSV: planilhas de antes das colunas "camadas" e
+// "gmudEvidencias" continuam válidas (no formulário os dois são obrigatórios).
+function validar(dados, regrasDoFormulario = true) {
     const erros = {};
     const tipo = texto(dados, "tipo");
     const squad = texto(dados, "squad");
@@ -4924,7 +4992,7 @@ function validar(dados, exigirCamada = true) {
         const valorKr = krsInformados[indice];
         const kr = typeof valorKr === "string" ? valorKr.trim() : "";
         const linha = `OKR ${okr || indice + 1}`;
-        const krsDoOkr = objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [];
+        const krsDoOkr = okrDe(okr)?.krs.map((k) => k.codigo) ?? [];
         if (!pertence(okrsDisponiveis(), okr)) {
             erros.okrs ??= `${linha}: OKR desconhecido (cadastre-o no cartão "OKRs e KRs").`;
         }
@@ -4976,19 +5044,17 @@ function validar(dados, exigirCamada = true) {
     let historia = null;
     if (tipo === "História") {
         const classificacao = texto(dados, "classificacao");
-        const complexidadeTexto = texto(dados, "complexidade");
-        const complexidade = complexidadeTexto === "" ? null : Number(complexidadeTexto);
-        if (complexidade !== null && (!Number.isFinite(complexidade) || complexidade < 0)) {
-            erros.complexidade = "Informe um número maior ou igual a zero.";
-        }
         if (classificacao === "funcional") {
-            const bcp = texto(dados, "bcp");
+            // Aceita vírgula decimal ("7,5").
+            const bcp = texto(dados, "bcp").replace(",", ".");
             if (!bcp)
-                erros.bcp = "BCP é obrigatório para história funcional.";
-            historia = { funcional: true, bcp, complexidade };
+                erros.bcp = "BCP-Score é obrigatório para história funcional.";
+            else if (!Number.isFinite(Number(bcp)))
+                erros.bcp = "O BCP-Score deve ser um número.";
+            historia = { funcional: true, bcp };
         }
         else if (classificacao === "nao-funcional") {
-            historia = { funcional: false, complexidade };
+            historia = { funcional: false };
         }
         else {
             erros.classificacao = "Informe se a história é funcional ou não funcional.";
@@ -5005,8 +5071,16 @@ function validar(dados, exigirCamada = true) {
         const titulo = texto(dados, "gmudTitulo");
         if (titulo && !nome)
             erros.gmudNome = "Informe o número da GMUD para usar o nome.";
+        // Teve GMUD, tem que ter evidências.
+        const evidencias = texto(dados, "gmudEvidencias");
+        if (evidencias && !nome)
+            erros.gmudNome = "Informe o número da GMUD para usar as evidências.";
+        if (evidencias && !urlValida(evidencias))
+            erros.gmudEvidencias = "Link inválido (use http:// ou https://).";
+        else if (nome && !evidencias && regrasDoFormulario)
+            erros.gmudEvidencias = "Com GMUD, informe o link das evidências.";
         if (nome)
-            gmud = { nome, titulo: titulo || null, link: link || null };
+            gmud = { nome, titulo: titulo || null, link: link || null, evidencias: evidencias || null };
     }
     let git = null;
     const houveAlteracaoGit = texto(dados, "git");
@@ -5048,7 +5122,7 @@ function validar(dados, exigirCamada = true) {
         .getAll("siglas")
         .filter((s) => typeof s === "string" && pertence(siglasDisponiveis(), s));
     const camadas = dados.getAll("camadas").filter((c) => typeof c === "string" && pertence(CAMADAS, c));
-    if (exigirCamada && camadas.length === 0)
+    if (regrasDoFormulario && camadas.length === 0)
         erros.camadas = "Marque ao menos uma camada (backend, frontend, database ou infra).";
     const servicosAws = dados
         .getAll("servicosAws")
@@ -5380,13 +5454,13 @@ function iniciarEdicao(registro) {
     definirValor("impeditivo", registro.impeditivo);
     if (registro.historia) {
         marcarRadio("classificacao", registro.historia.funcional ? "funcional" : "nao-funcional");
-        definirValor("complexidade", registro.historia.complexidade?.toString() ?? "");
         if (registro.historia.funcional)
             definirValor("bcp", registro.historia.bcp);
     }
     definirValor("gmudNome", registro.gmud?.nome ?? "");
     definirValor("gmudLink", registro.gmud?.link ?? "");
     definirValor("gmudTitulo", registro.gmud?.titulo ?? "");
+    definirValor("gmudEvidencias", registro.gmud?.evidencias ?? "");
     marcarRadio("git", registro.git ? "sim" : "nao");
     definirValor("linkPr", registro.git?.linkPullRequest ?? "");
     definirValor("linkActions", registro.git?.linkActions ?? "");
@@ -5461,10 +5535,8 @@ function criarLinha(registro) {
     const { historia, gmud, git } = registro;
     let classificacao = VAZIO;
     let bcp = VAZIO;
-    let complexidade = VAZIO;
     if (historia) {
         classificacao = historia.funcional ? "Funcional" : "Não funcional";
-        complexidade = historia.complexidade?.toString() ?? VAZIO;
         if (historia.funcional)
             bcp = historia.bcp;
     }
@@ -5492,7 +5564,6 @@ function criarLinha(registro) {
         registro.descricao,
         classificacao,
         bcp,
-        complexidade,
         gmud ? (gmud.link ? criarLink(gmud.link, rotuloGmud(gmud)) : rotuloGmud(gmud)) : VAZIO,
         okrs,
         textoDoVinculoPdi(registro.pdi), // pdi.ts
@@ -5511,6 +5582,7 @@ function criarLinha(registro) {
         git ? "Sim" : "Não",
         git?.linkPullRequest ? criarLink(git.linkPullRequest, "Pull Request") : VAZIO,
         git?.linkActions ? criarLink(git.linkActions, "Actions (prod)") : VAZIO,
+        gmud?.evidencias ? criarLink(gmud.evidencias, "Evidências") : VAZIO,
         acoes,
     ];
     const linha = document.createElement("tr");
@@ -5604,8 +5676,8 @@ async function gerarPaginaPublicada() {
     // fechar a tag <script> antes da hora.
     const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
     const tagPdi = await tagDoPdiPublicado();
-    // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
-    const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
+    // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarOkrsCadastrados em okrs.ts).
+    const okrs = JSON.stringify(carregarOkrsCadastrados()).replaceAll("<", "\\u003c");
     const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}<\/script>\n`;
     // Foto do cabeçalho (perfil.ts): quem abre o link não tem o localStorage de quem publica.
     const foto = lerFoto();
@@ -5765,7 +5837,14 @@ function aplicarImportacao(importados) {
             pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
             // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
             okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
-            gmud: r.gmud && !r.gmud.titulo && atual.gmud?.nome === r.gmud.nome ? { ...r.gmud, titulo: atual.gmud.titulo ?? null } : r.gmud,
+            // Mesma GMUD sem nome/evidências no CSV: mantém os do formulário.
+            gmud: r.gmud && atual.gmud?.nome === r.gmud.nome
+                ? {
+                    ...r.gmud,
+                    titulo: r.gmud.titulo || atual.gmud.titulo || null,
+                    evidencias: r.gmud.evidencias || atual.gmud.evidencias || null,
+                }
+                : r.gmud,
         };
     });
     const idsImportados = new Set(importados.map((r) => r.id));
@@ -5819,6 +5898,7 @@ atualizarCamposCondicionais();
 <script data-app>
 "use strict";
 // OKRs e KRs: cadastro na aba de edição e seletor do formulário da entrega.
+// Hierarquia: objetivo (tema, ex.: "Cliente") > OKR (nome + código) > KR1..N.
 //
 // A entrega guarda o código do OKR (ex.: "A") e, opcionalmente, o código do KR
 // (ex.: "KR1") em OkrImpactado (app.ts). Assim o CSV (okr1, okr1Kr...) e os
@@ -5827,11 +5907,12 @@ atualizarCamposCondicionais();
 // Carrega antes de csv.ts: a página publicada valida o CSV embutido ao abrir, e
 // validar() já usa okrsDisponiveis().
 const CHAVE_STORAGE_OKRS = "registro-entregas:okrs";
-function objetivoValido(valor) {
+function okrCadastradoValido(valor) {
     if (typeof valor !== "object" || valor === null)
         return false;
-    const { codigo, titulo, krs } = valor;
-    return (typeof codigo === "string" &&
+    const { objetivo, codigo, titulo, krs } = valor;
+    return ((objetivo === undefined || typeof objetivo === "string") &&
+        typeof codigo === "string" &&
         typeof titulo === "string" &&
         Array.isArray(krs) &&
         krs.every((kr) => {
@@ -5841,30 +5922,41 @@ function objetivoValido(valor) {
 }
 // Página publicada: o catálogo vem embutido (#okrs-publicados), não do navegador
 // de quem abre. Sem nada cadastrado: os OKRs iniciais de config.ts, sem título.
-function carregarObjetivos() {
+function carregarOkrsCadastrados() {
     try {
         const publicado = document.getElementById("okrs-publicados")?.textContent;
         const dados = JSON.parse(publicado ?? localStorage.getItem(CHAVE_STORAGE_OKRS) ?? "null");
-        if (Array.isArray(dados) && dados.every(objetivoValido))
-            return dados;
+        if (Array.isArray(dados) && dados.every(okrCadastradoValido)) {
+            return dados.map((okr) => ({ ...okr, objetivo: okr.objetivo ?? "" }));
+        }
     }
     catch {
         // cai nos iniciais
     }
-    return OKRS.map((codigo) => ({ codigo, titulo: "", krs: [] }));
+    return OKRS.map((codigo) => ({ objetivo: "", codigo, titulo: "", krs: [] }));
+}
+const SEM_OBJETIVO = "Sem objetivo";
+// OKRs agrupados pelo objetivo, na ordem em que cada objetivo aparece no cadastro.
+function okrsPorObjetivo(okrs) {
+    const grupos = new Map();
+    for (const okr of okrs) {
+        const objetivo = okr.objetivo.trim() || SEM_OBJETIVO;
+        grupos.set(objetivo, [...(grupos.get(objetivo) ?? []), okr]);
+    }
+    return [...grupos];
 }
 // Cadastrados + os que já aparecem em registros (ex.: OKR que saiu do cadastro).
 function okrsDisponiveis() {
     return [
-        ...new Set([...carregarObjetivos().map((o) => o.codigo), ...registros.flatMap((r) => r.okrs.map((o) => o.okr))]),
+        ...new Set([...carregarOkrsCadastrados().map((o) => o.codigo), ...registros.flatMap((r) => r.okrs.map((o) => o.okr))]),
     ];
 }
-function objetivoDe(codigo) {
-    return carregarObjetivos().find((o) => o.codigo === codigo);
+function okrDe(codigo) {
+    return carregarOkrsCadastrados().find((o) => o.codigo === codigo);
 }
 // "OKR A · Aumentar receita" (ou só "OKR A", sem título).
 function rotuloOkr(codigo) {
-    const titulo = objetivoDe(codigo)?.titulo.trim();
+    const titulo = okrDe(codigo)?.titulo.trim();
     return titulo ? `OKR ${codigo} · ${titulo}` : `OKR ${codigo}`;
 }
 function corDoOkr(codigo) {
@@ -5875,7 +5967,7 @@ function corDoOkr(codigo) {
 function rotuloKr(okr, kr) {
     if (!kr)
         return "OKR como um todo";
-    const titulo = objetivoDe(okr)?.krs.find((k) => k.codigo === kr)?.titulo.trim();
+    const titulo = okrDe(okr)?.krs.find((k) => k.codigo === kr)?.titulo.trim();
     return titulo ? `${kr} · ${titulo}` : kr;
 }
 // ---------- Seletor no formulário da entrega ----------
@@ -5903,7 +5995,8 @@ function criarCartaoAlvo(nome, valor, etiqueta, titulo, cor, marcado) {
     cartao.style.setProperty("--cor-ponto", cor);
     return cartao;
 }
-function criarBlocoOkr(objetivo, indice, impacto) {
+function criarBlocoOkr(okr, indice, impacto) {
+    const objetivo = okr;
     const cor = corDoOkr(objetivo.codigo);
     const bloco = document.createElement("details");
     bloco.className = "pdi-versao-bloco okr-bloco";
@@ -5972,14 +6065,30 @@ function atualizarBlocosOkr() {
         bloco.classList.toggle("com-escolha", !!alvo);
     }
 }
-// OKRs do cadastro + os que só existem nas entregas (para não perder o vínculo ao editar).
+// OKRs do cadastro, agrupados pelo objetivo, + os que só existem nas entregas
+// (para não perder o vínculo ao editar).
 function preencherOkrsEntrega(impactos) {
-    const objetivos = carregarObjetivos();
+    const okrs = carregarOkrsCadastrados();
     for (const { okr } of impactos) {
-        if (!objetivos.some((o) => o.codigo === okr))
-            objetivos.push({ codigo: okr, titulo: "Fora do cadastro", krs: [] });
+        if (!okrs.some((o) => o.codigo === okr))
+            okrs.push({ objetivo: "Fora do cadastro", codigo: okr, titulo: `OKR ${okr}`, krs: [] });
     }
-    escolhaOkrs.replaceChildren(...objetivos.map((objetivo, indice) => criarBlocoOkr(objetivo, indice, impactos.find((i) => i.okr === objetivo.codigo))));
+    let indice = 0;
+    escolhaOkrs.replaceChildren(...okrsPorObjetivo(okrs).map(([objetivo, doObjetivo]) => {
+        const grupo = document.createElement("div");
+        grupo.className = "okr-grupo";
+        const titulo = document.createElement("span");
+        titulo.className = "okr-grupo-titulo";
+        titulo.textContent = objetivo;
+        grupo.append(titulo, ...doObjetivo.map((okr) => criarBlocoOkr(okr, indice++, impactos.find((i) => i.okr === okr.codigo))));
+        return grupo;
+    }));
+    if (okrs.length === 0) {
+        escolhaOkrs.append(Object.assign(document.createElement("p"), {
+            className: "dica",
+            textContent: "Nenhum OKR cadastrado: cadastre no cartão “OKRs e KRs”, mais abaixo nesta aba.",
+        }));
+    }
     atualizarBlocosOkr();
 }
 // Chamada em aoEnviar (app.ts) antes de validar().
@@ -6011,58 +6120,110 @@ function criarCampoTexto(rotulo, classe, valor, placeholder = "") {
     campo.append(texto, entrada);
     return campo;
 }
+// Próximo KR da lista: um a mais que o maior "KRn" (remover um do meio não repete número).
+function proximoCodigoKr(lista) {
+    const numeros = [...lista.querySelectorAll(".kr-codigo")].map((campo) => Number(/^kr(\d+)$/i.exec(campo.value.trim())?.[1] ?? 0));
+    return `KR${Math.max(0, ...numeros) + 1}`;
+}
 function adicionarLinhaKr(lista, kr) {
     const linha = document.createElement("div");
     linha.className = "kr-linha";
-    const proximo = `KR${lista.children.length + 1}`;
-    const codigo = criarCampoTexto("Código", "kr-codigo", kr?.codigo ?? proximo);
+    const codigo = criarCampoTexto("KR", "kr-codigo", kr?.codigo ?? proximoCodigoKr(lista));
     const titulo = criarCampoTexto("Key result", "kr-titulo", kr?.titulo ?? "", "Ex.: Reduzir em 20% as chamadas ao atendimento");
     linha.append(codigo, titulo, criarBotao("Remover", "perigo", () => linha.remove()));
     lista.append(linha);
 }
-function adicionarCartaoObjetivo(objetivo) {
+// Primeira letra livre (A, B, C...) entre o cadastro na tela e as entregas; depois, O27, O28...
+// Pula códigos de entregas antigas: um OKR novo nunca herda sem querer entregas de
+// um OKR que deixou de existir. Para herdar, digite o código antigo no campo.
+function proximoCodigoOkr() {
+    const usados = new Set([
+        ...[...listaCadastroOkrs.querySelectorAll(".okr-codigo")].map((c) => c.value.trim().toUpperCase()),
+        ...registros.flatMap((r) => r.okrs.map((o) => o.okr.toUpperCase())),
+    ]);
+    for (let i = 0; i < 26; i++) {
+        const letra = String.fromCharCode(65 + i);
+        if (!usados.has(letra))
+            return letra;
+    }
+    let numero = 27;
+    while (usados.has(`O${numero}`))
+        numero++;
+    return `O${numero}`;
+}
+function adicionarCartaoOkr(container, okr) {
     const cartao = document.createElement("fieldset");
     cartao.className = "okr-cadastro";
-    const indice = listaCadastroOkrs.children.length;
+    const indice = listaCadastroOkrs.querySelectorAll(".okr-cadastro").length;
     cartao.style.setProperty("--cor-okr", CORES_OKR[indice % CORES_OKR.length] ?? "var(--destaque)");
     const topo = document.createElement("div");
     topo.className = "okr-cadastro-topo";
-    topo.append(criarCampoTexto("Código *", "okr-codigo", objetivo?.codigo ?? String.fromCharCode(65 + indice)), criarCampoTexto("Objetivo *", "okr-titulo", objetivo?.titulo ?? "", "Ex.: Aumentar a autonomia do cliente no portal"), criarBotao("Remover OKR", "perigo", () => cartao.remove()));
+    topo.append(criarCampoTexto("Código", "okr-codigo", okr?.codigo ?? proximoCodigoOkr()), criarCampoTexto("OKR *", "okr-titulo", okr?.titulo ?? "", "Ex.: Aumentar a satisfação do cliente"), criarBotao("Remover OKR", "perigo", () => cartao.remove()));
     const krs = document.createElement("div");
     krs.className = "kr-linhas";
-    for (const kr of objetivo?.krs ?? [])
+    container.append(cartao);
+    for (const kr of okr?.krs ?? [])
         adicionarLinhaKr(krs, kr);
+    // OKR novo já começa com o KR1.
+    if (!okr)
+        adicionarLinhaKr(krs);
     cartao.append(topo, krs, criarBotao("+ Adicionar KR", "secundario", () => adicionarLinhaKr(krs)));
-    listaCadastroOkrs.append(cartao);
+}
+// Um bloco por objetivo (ex.: "Cliente"), com os OKRs dele dentro.
+function adicionarGrupoObjetivo(nome = "", okrs = []) {
+    listaCadastroOkrs.querySelector(":scope > .estado-vazio")?.remove();
+    const grupo = document.createElement("section");
+    grupo.className = "objetivo-cadastro";
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "objetivo-cadastro-topo";
+    const okrsDoGrupo = document.createElement("div");
+    okrsDoGrupo.className = "okrs-do-objetivo";
+    cabecalho.append(criarCampoTexto("Objetivo *", "objetivo-nome", nome === SEM_OBJETIVO ? "" : nome, "Ex.: Cliente"), criarBotao("+ OKR neste objetivo", "secundario", () => adicionarCartaoOkr(okrsDoGrupo)), criarBotao("Remover objetivo", "perigo", () => grupo.remove()));
+    grupo.append(cabecalho, okrsDoGrupo);
+    listaCadastroOkrs.append(grupo);
+    if (okrs.length === 0)
+        adicionarCartaoOkr(okrsDoGrupo);
+    for (const okr of okrs)
+        adicionarCartaoOkr(okrsDoGrupo, okr);
 }
 function renderizarCadastroOkrs() {
     listaCadastroOkrs.replaceChildren();
-    for (const objetivo of carregarObjetivos())
-        adicionarCartaoObjetivo(objetivo);
+    const grupos = okrsPorObjetivo(carregarOkrsCadastrados());
+    for (const [objetivo, okrs] of grupos)
+        adicionarGrupoObjetivo(objetivo, okrs);
+    if (grupos.length === 0) {
+        listaCadastroOkrs.append(Object.assign(document.createElement("p"), {
+            className: "estado-vazio",
+            textContent: "Nenhum OKR cadastrado ainda. Clique em “+ Novo objetivo” para começar (ex.: Cliente).",
+        }));
+    }
 }
-function objetivosDoCadastro() {
+function okrsDoCadastro() {
     const valor = (raiz, classe) => raiz.querySelector(`.${classe}`)?.value.trim() ?? "";
-    return [...listaCadastroOkrs.querySelectorAll(".okr-cadastro")].map((cartao) => ({
+    return [...listaCadastroOkrs.querySelectorAll(".objetivo-cadastro")].flatMap((grupo) => [...grupo.querySelectorAll(".okr-cadastro")].map((cartao) => ({
+        objetivo: valor(grupo, "objetivo-nome"),
         codigo: valor(cartao, "okr-codigo"),
         titulo: valor(cartao, "okr-titulo"),
         krs: [...cartao.querySelectorAll(".kr-linha")].map((linha) => ({
             codigo: valor(linha, "kr-codigo"),
             titulo: valor(linha, "kr-titulo"),
         })),
-    }));
+    })));
 }
-// Códigos obrigatórios e únicos; OKR ou KR usado por alguma entrega não pode sumir.
-function errosDosObjetivos(objetivos) {
+// Códigos obrigatórios e únicos, objetivo e nome preenchidos. Impedem salvar.
+function errosDosOkrs(objetivos) {
     const erros = [];
     const codigos = objetivos.map((o) => o.codigo.toLowerCase());
     for (const [indice, objetivo] of objetivos.entries()) {
-        const onde = `OKR ${indice + 1}`;
+        const onde = `OKR ${objetivo.codigo || indice + 1}`;
         if (!objetivo.codigo)
             erros.push(`${onde}: informe o código (ex.: A).`);
         else if (codigos.indexOf(objetivo.codigo.toLowerCase()) !== indice)
             erros.push(`${onde}: o código "${objetivo.codigo}" está repetido.`);
+        if (!objetivo.objetivo)
+            erros.push(`${onde}: informe o objetivo do grupo (ex.: Cliente).`);
         if (!objetivo.titulo)
-            erros.push(`${onde}: informe o objetivo.`);
+            erros.push(`${onde}: informe o nome do OKR.`);
         const krs = objetivo.krs.map((k) => k.codigo.toLowerCase());
         for (const [i, kr] of objetivo.krs.entries()) {
             if (!kr.codigo)
@@ -6071,22 +6232,34 @@ function errosDosObjetivos(objetivos) {
                 erros.push(`${onde}: o KR "${kr.codigo}" está repetido.`);
         }
     }
-    for (const registro of registros) {
-        for (const { okr, kr } of registro.okrs) {
-            const objetivo = objetivos.find((o) => o.codigo === okr);
-            if (!objetivo)
-                erros.push(`O OKR ${okr} está na entrega "${registro.assunto}": não dá para remover.`);
-            else if (kr && !objetivo.krs.some((k) => k.codigo === kr)) {
-                erros.push(`O ${kr} do OKR ${okr} está na entrega "${registro.assunto}": não dá para remover.`);
-            }
-        }
-    }
     return [...new Set(erros)];
 }
-function salvarObjetivos(objetivos) {
-    const erros = errosDosObjetivos(objetivos);
+// OKRs/KRs usados por entregas que não estão no cadastro novo, com quantas entregas
+// cada um ("OKR A: 5 entregas"). Não impede salvar: as entregas mantêm o código e
+// aparecem como "Fora do cadastro" até serem editadas.
+function avisosDosOkrs(objetivos) {
+    const contagem = new Map();
+    for (const registro of registros) {
+        for (const { okr, kr } of registro.okrs) {
+            const cadastrado = objetivos.find((o) => o.codigo === okr);
+            const chave = !cadastrado ? `OKR ${okr}` : kr && !cadastrado.krs.some((k) => k.codigo === kr) ? `${kr} do OKR ${okr}` : "";
+            if (chave)
+                contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
+        }
+    }
+    return [...contagem].map(([chave, total]) => `• ${chave}: ${total} ${total === 1 ? "entrega" : "entregas"}`);
+}
+function salvarOkrsCadastrados(objetivos) {
+    const erros = errosDosOkrs(objetivos);
     if (erros.length > 0) {
         alert(`OKRs não salvos:\n\n${erros.slice(0, MAXIMO_ERROS_EXIBIDOS).join("\n")}`);
+        return false;
+    }
+    const avisos = avisosDosOkrs(objetivos);
+    if (avisos.length > 0 &&
+        !confirm(`Estas entregas usam OKRs/KRs que não estão no cadastro:\n\n${avisos.slice(0, MAXIMO_ERROS_EXIBIDOS).join("\n")}\n\n` +
+            "Elas continuam com o código antigo e aparecem como “Fora do cadastro” até você editá-las " +
+            "(ou cadastre um OKR com o mesmo código). Salvar mesmo assim?")) {
         return false;
     }
     localStorage.setItem(CHAVE_STORAGE_OKRS, JSON.stringify(objetivos));
@@ -6109,14 +6282,14 @@ function okrsDoFormData(dados) {
     }));
 }
 function aoSalvarOkrs() {
-    if (!salvarObjetivos(objetivosDoCadastro()))
+    if (!salvarOkrsCadastrados(okrsDoCadastro()))
         return;
     renderizarCadastroOkrs();
     statusOkrs.textContent = `OKRs salvos às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`;
 }
 function exportarOkrs() {
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([JSON.stringify(carregarObjetivos(), null, 2)], { type: "application/json" }));
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(carregarOkrsCadastrados(), null, 2)], { type: "application/json" }));
     link.download = `okrs-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(link.href);
@@ -6133,13 +6306,13 @@ async function importarOkrs() {
         dados = null;
     }
     campoImportarOkrs.value = "";
-    if (!Array.isArray(dados) || !dados.every(objetivoValido)) {
-        alert('Arquivo inválido: use uma lista [ { "codigo", "titulo", "krs": [ { "codigo", "titulo" } ] } ].');
+    if (!Array.isArray(dados) || !dados.every(okrCadastradoValido)) {
+        alert('Arquivo inválido: use uma lista [ { "objetivo", "codigo", "titulo", "krs": [ { "codigo", "titulo" } ] } ].');
         return;
     }
     if (!confirm("Substituir os OKRs cadastrados pelos do arquivo?"))
         return;
-    if (!salvarObjetivos(dados))
+    if (!salvarOkrsCadastrados(dados))
         return;
     renderizarCadastroOkrs();
     statusOkrs.textContent = "OKRs importados.";
@@ -6148,7 +6321,7 @@ async function importarOkrs() {
 preencherOkrsEntrega([]);
 renderizarCadastroOkrs();
 escolhaOkrs.addEventListener("change", atualizarBlocosOkr);
-el("btn-adicionar-objetivo").addEventListener("click", () => adicionarCartaoObjetivo());
+el("btn-adicionar-objetivo").addEventListener("click", () => adicionarGrupoObjetivo());
 el("btn-salvar-okrs").addEventListener("click", aoSalvarOkrs);
 el("btn-exportar-okrs").addEventListener("click", exportarOkrs);
 campoImportarOkrs.addEventListener("change", () => void importarOkrs());
@@ -6193,10 +6366,12 @@ const COLUNAS_CSV_OPCIONAIS = [
     "impeditivo",
     "classificacao",
     "bcp",
+    // Campo removido: a coluna ainda é aceita (planilhas antigas), mas é ignorada.
     "complexidade",
     "gmudNome",
     "gmudTitulo",
     "gmudLink",
+    "gmudEvidencias",
     "git",
     "linkPr",
     "linkActions",
@@ -6210,6 +6385,7 @@ const COLUNAS_CSV_TEXTO = [
     "gmudNome",
     "gmudTitulo",
     "gmudLink",
+    "gmudEvidencias",
     "linkPr",
     "linkActions",
 ];
@@ -6337,8 +6513,6 @@ function formDataDaLinha(linha, numerosOkr, erros) {
     dados.set("sprint", valor("sprint").replace(/^s/i, ""));
     // Aceita "nao-funcional", "Não funcional"...
     dados.set("classificacao", semAcento(valor("classificacao")).replace(/\s+/g, "-"));
-    // Aceita vírgula decimal ("3,5").
-    dados.set("complexidade", valor("complexidade").replace(",", "."));
     for (const coluna of ["dataInicio", "dataFim"]) {
         const data = dataIsoDoCsv(valor(coluna));
         if (valor(coluna) && !data)
@@ -6398,7 +6572,7 @@ function formDataDaLinha(linha, numerosOkr, erros) {
         const codigo = canonico(okrsDisponiveis(), okr);
         dados.append("okr", codigo);
         // KR opcional ("KR1", "kr1"...): em branco = o OKR como um todo.
-        dados.append("okrKr", kr ? canonico(objetivoDe(codigo)?.krs.map((k) => k.codigo) ?? [], kr) : "");
+        dados.append("okrKr", kr ? canonico(okrDe(codigo)?.krs.map((k) => k.codigo) ?? [], kr) : "");
         dados.append("okrGrau", canonico(GRAUS_IMPACTO, grau));
         dados.append("okrMotivo", motivo);
     }
@@ -6481,7 +6655,7 @@ function lerLinhasDoCsv(linhas, cabecalho, numerosOkr, importados, erros, ids) {
         const errosLinha = {};
         if (campos.length > cabecalho.length)
             errosLinha.colunas = "Há mais células do que colunas no cabeçalho.";
-        const resultado = validar(formDataDaLinha(linha, numerosOkr, errosLinha), false);
+        const resultado = validar(formDataDaLinha(linha, numerosOkr, errosLinha), false); // regras só do formulário ficam de fora
         // Os erros da conversão (data inválida etc.) são mais específicos que os de validar().
         if (!resultado.ok)
             Object.assign(errosLinha, { ...resultado.erros, ...errosLinha });
@@ -8523,7 +8697,8 @@ function criarCartaoOkr(okr, indice, doOkr, total) {
         el("dash-okr-detalhe").scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
     cartao.style.setProperty("--cor-tipo", CORES_OKR[indice % CORES_OKR.length] ?? "var(--destaque)");
-    const titulo = objetivoDe(okr)?.titulo.trim();
+    const titulo = okrDe(okr)?.titulo.trim();
+    const objetivo = okrDe(okr)?.objetivo.trim();
     cartao.setAttribute("aria-pressed", String(selecionado));
     cartao.disabled = semEntregas;
     const capa = criarElemento("span", "entrega-capa capa-okr");
@@ -8547,7 +8722,7 @@ function criarCartaoOkr(okr, indice, doOkr, total) {
         linhas.append(linha);
     }
     const info = criarElemento("span", "okr-info");
-    info.append(criarElemento("strong", "okr-nome", `OKR ${okr}`), ...(titulo ? [criarElemento("span", "okr-titulo", titulo)] : []), numero, barra, linhas, criarMedidorIntensidade(intensidadeMedia(doOkr)), criarElemento("span", "tipo-acao", semEntregas ? "Sem entregas na seleção" : selecionado ? "Em detalhe abaixo ↓" : "Clique para ver as entregas"));
+    info.append(...(objetivo ? [criarElemento("span", "okr-objetivo", objetivo)] : []), criarElemento("strong", "okr-nome", titulo || `OKR ${okr}`), ...(titulo ? [criarElemento("span", "okr-titulo", `OKR ${okr}`)] : []), numero, barra, linhas, criarMedidorIntensidade(intensidadeMedia(doOkr)), criarElemento("span", "tipo-acao", semEntregas ? "Sem entregas na seleção" : selecionado ? "Em detalhe abaixo ↓" : "Clique para ver as entregas"));
     cartao.append(capa, info);
     return cartao;
 }
@@ -8558,7 +8733,7 @@ function criarDetalheOkr(okr, doOkr) {
     const titulo = criarElemento("div");
     titulo.append(criarElemento("h3", "", `Como as entregas impactam o ${rotuloOkr(okr)}`), criarElemento("p", "dica", "Cada linha é uma entrega: o grau diz o quanto ela move o OKR, o motivo diz por quê. Clique para abrir a entrega."));
     // Quantas entregas em cada KR (e no OKR como um todo), na ordem do cadastro.
-    const krs = comExtras(objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [], doOkr.flatMap(({ impacto }) => (impacto.kr ? [impacto.kr] : [])));
+    const krs = comExtras(okrDe(okr)?.krs.map((k) => k.codigo) ?? [], doOkr.flatMap(({ impacto }) => (impacto.kr ? [impacto.kr] : [])));
     const porKr = criarElemento("div", "okr-krs");
     for (const kr of [...krs, ""]) {
         const quantidade = doOkr.filter(({ impacto }) => (impacto.kr ?? "") === kr).length;
@@ -8752,8 +8927,7 @@ function abrirDetalhesEntrega(registro) {
     if (historia) {
         adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
         if (historia.funcional)
-            adicionarDetalhe(detalhes, "BCP", historia.bcp);
-        adicionarDetalhe(detalhes, "Complexidade", historia.complexidade?.toString() ?? VAZIO);
+            adicionarDetalhe(detalhes, "BCP-Score", historia.bcp);
     }
     if (gmud)
         adicionarDetalhe(detalhes, "GMUD", rotuloGmud(gmud));
@@ -8762,6 +8936,8 @@ function abrirDetalhesEntrega(registro) {
     const links = criarElemento("div", "entrega-links");
     if (gmud?.link)
         links.append(criarLink(gmud.link, `GMUD ${gmud.nome}`));
+    if (gmud?.evidencias)
+        links.append(criarLink(gmud.evidencias, "Evidências da GMUD"));
     if (git?.linkPullRequest)
         links.append(criarLink(git.linkPullRequest, "Pull Request"));
     if (git?.linkActions)

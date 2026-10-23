@@ -3395,6 +3395,20 @@ button.modal-fechar {
   border-color: color-mix(in srgb, var(--tipo-discovery) 45%, transparent);
 }
 
+/* Nome e evidências da GMUD: linha inteira, dois campos lado a lado. */
+.gmud-extra {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .gmud-extra {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ---------- Busca da tabela de registros ---------- */
 
 /* Mesma barra da busca do dashboard, numa linha só, logo abaixo do título. */
@@ -3453,10 +3467,60 @@ button.modal-fechar {
   color: var(--cor-tipo);
 }
 
+/* Seletor da entrega: OKRs agrupados pelo objetivo. */
+.okr-grupo {
+  display: grid;
+  gap: 8px;
+}
+
+.okr-grupo-titulo,
+.okr-objetivo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.okr-grupo + .okr-grupo {
+  margin-top: 8px;
+}
+
+/* Cadastro: um bloco por objetivo, com os cartões dos OKRs dele dentro. */
+.objetivo-cadastro {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.objetivo-cadastro-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.objetivo-cadastro-topo .campo {
+  flex: 1 1 260px;
+}
+
+.objetivo-cadastro-topo .objetivo-nome {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.okrs-do-objetivo {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+  gap: 12px;
+}
+
 /* Cadastro: um cartão por OKR, com a cor dele na borda e os KRs em linhas. */
 .okrs-cadastro {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
   gap: 14px;
   margin: 14px 0;
 }
@@ -3467,6 +3531,7 @@ button.modal-fechar {
   gap: 10px;
   margin: 0;
   padding: 16px;
+  background: var(--cartao);
   border: 1px solid var(--borda);
   border-top: 4px solid var(--cor-okr);
   border-radius: var(--raio);

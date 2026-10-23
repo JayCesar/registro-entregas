@@ -1035,7 +1035,8 @@ function criarCartaoOkr(okr: string, indice: number, doOkr: ImpactoDaEntrega[], 
     el("dash-okr-detalhe").scrollIntoView({ behavior: "smooth", block: "nearest" });
   });
   cartao.style.setProperty("--cor-tipo", CORES_OKR[indice % CORES_OKR.length] ?? "var(--destaque)");
-  const titulo = objetivoDe(okr)?.titulo.trim();
+  const titulo = okrDe(okr)?.titulo.trim();
+  const objetivo = okrDe(okr)?.objetivo.trim();
   cartao.setAttribute("aria-pressed", String(selecionado));
   cartao.disabled = semEntregas;
 
@@ -1079,8 +1080,9 @@ function criarCartaoOkr(okr: string, indice: number, doOkr: ImpactoDaEntrega[], 
 
   const info = criarElemento("span", "okr-info");
   info.append(
-    criarElemento("strong", "okr-nome", `OKR ${okr}`),
-    ...(titulo ? [criarElemento("span", "okr-titulo", titulo)] : []),
+    ...(objetivo ? [criarElemento("span", "okr-objetivo", objetivo)] : []),
+    criarElemento("strong", "okr-nome", titulo || `OKR ${okr}`),
+    ...(titulo ? [criarElemento("span", "okr-titulo", `OKR ${okr}`)] : []),
     numero,
     barra,
     linhas,
@@ -1108,7 +1110,7 @@ function criarDetalheOkr(okr: string, doOkr: ImpactoDaEntrega[]): HTMLElement {
   );
   // Quantas entregas em cada KR (e no OKR como um todo), na ordem do cadastro.
   const krs = comExtras(
-    objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [],
+    okrDe(okr)?.krs.map((k) => k.codigo) ?? [],
     doOkr.flatMap(({ impacto }) => (impacto.kr ? [impacto.kr] : [])),
   );
   const porKr = criarElemento("div", "okr-krs");
@@ -1384,8 +1386,7 @@ function abrirDetalhesEntrega(registro: Registro): void {
   if (registro.microsservicos.length > 0) adicionarDetalhe(detalhes, "Microsserviços", registro.microsservicos.join(", "));
   if (historia) {
     adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
-    if (historia.funcional) adicionarDetalhe(detalhes, "BCP", historia.bcp);
-    adicionarDetalhe(detalhes, "Complexidade", historia.complexidade?.toString() ?? VAZIO);
+    if (historia.funcional) adicionarDetalhe(detalhes, "BCP-Score", historia.bcp);
   }
   if (gmud) adicionarDetalhe(detalhes, "GMUD", rotuloGmud(gmud));
   adicionarDetalhe(detalhes, "Alteração em Git", git ? "Sim" : "Não");
@@ -1393,6 +1394,7 @@ function abrirDetalhesEntrega(registro: Registro): void {
 
   const links = criarElemento("div", "entrega-links");
   if (gmud?.link) links.append(criarLink(gmud.link, `GMUD ${gmud.nome}`));
+  if (gmud?.evidencias) links.append(criarLink(gmud.evidencias, "Evidências da GMUD"));
   if (git?.linkPullRequest) links.append(criarLink(git.linkPullRequest, "Pull Request"));
   if (git?.linkActions) links.append(criarLink(git.linkActions, "Deploy (Actions)"));
   if (links.childElementCount > 0) corpo.append(criarSecaoEntrega("Links", links));
