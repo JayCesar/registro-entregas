@@ -20,6 +20,11 @@
 //   node scripts/publicar.mjs --json ~/Downloads/registro-entregas-2026-10-25.json
 //   node scripts/publicar.mjs --bucket meu-bucket     gera, sobe e imprime o link (1h)
 //       [--chave pasta/index.html] [--expira 3600]
+//
+// Modo --arquivo-unico (roda junto do `npm run build`): gera registro-entregas.html
+// na raiz, o app COMPLETO (com a aba de edição e sem dados) num arquivo só. É o
+// que se leva para um PC onde não dá para baixar o repositório (ver README). Ele
+// mesmo gera a página publicada pelo botão "Gerar página para o S3".
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -38,7 +43,8 @@ function argumento(nome, padrao) {
 const bucket = argumento("bucket", "");
 const chave = argumento("chave", "registro-entregas/index.html");
 const expira = Number(argumento("expira", "3600"));
-const saida = join(raiz, "publicar", "index.html");
+const arquivoUnico = process.argv.includes("--arquivo-unico");
+const saida = arquivoUnico ? join(raiz, "registro-entregas.html") : join(raiz, "publicar", "index.html");
 
 function falhar(mensagem) {
   console.error(`\n✖ ${mensagem}\n`);
@@ -83,7 +89,7 @@ function lerCsv(caminho) {
   }
 }
 
-if (!existsSync(fonte.caminho)) {
+if (!arquivoUnico && !existsSync(fonte.caminho)) {
   falhar(
     `Arquivo de dados não encontrado: ${fonte.caminho}\n` +
       '  No site: aba Edição > "Exportar JSON" e passe o arquivo com --json (ver README).',
@@ -123,7 +129,7 @@ function montarTagDeDados() {
 // Dentro de <script>, "</script" encerraria a tag antes da hora.
 const seguroEmScript = (codigo) => codigo.replaceAll("</script", "<\\/script");
 
-const dados = montarTagDeDados();
+const dados = arquivoUnico ? null : montarTagDeDados();
 let html = ler("index.html");
 
 // Ícone e CSS embutidos.
@@ -146,9 +152,17 @@ html = html.replace(/\s*<script src="dist\/([\w-]+\.js)" defer><\/script>/g, (_,
 });
 if (scripts.length === 0) falhar('Nenhum <script src="dist/..." defer> encontrado no index.html.');
 
+// data-app marca os scripts do app: o botão "Gerar página para o S3" do arquivo
+// único os copia para a página publicada (ver gerarPaginaPublicada em app.ts).
+// No arquivo único, um script antes deles guarda o HTML da página como estava
+// antes de qualquer script mexer no DOM: é a base da página publicada.
+const captura =
+  "<script>window.fonteDoArquivoUnico = '<!DOCTYPE html>\\n' + document.documentElement.outerHTML;</script>";
 const fimDoCorpo =
-  `${dados.tag}\n` +
-  scripts.map((arquivo) => `<script>\n${seguroEmScript(ler(`dist/${arquivo}`))}\n</script>`).join("\n") +
+  `${arquivoUnico ? captura : dados.tag}\n` +
+  scripts
+    .map((arquivo) => `<script data-app>\n${seguroEmScript(ler(`dist/${arquivo}`))}\n</script>`)
+    .join("\n") +
   "\n</body>";
 html = html.replace("</body>", () => fimDoCorpo);
 
@@ -156,6 +170,10 @@ mkdirSync(dirname(saida), { recursive: true });
 writeFileSync(saida, html);
 
 console.log(`✔ Página gerada: ${relative(raiz, saida)} (${(html.length / 1024).toFixed(0)} KB)`);
+if (arquivoUnico) {
+  console.log("  App completo num arquivo só, para levar para o banco (ver README).");
+  process.exit(0);
+}
 console.log(`  Dados: ${fonte.caminho} (${fonte.tipo.toUpperCase()}, ${dados.quantidade} entregas)`);
 console.log("  Abra o arquivo no navegador para conferir antes de subir.");
 

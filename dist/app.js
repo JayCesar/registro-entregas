@@ -695,6 +695,32 @@ function exportarJson() {
 }
 // Confere só o mínimo para a tabela e o dashboard não quebrarem. Campos novos
 // ausentes (okrs, release, sprint, impeditivo) são completados por migrarRegistro.
+// ---------- Página publicada gerada no navegador (arquivo único) ----------
+// No arquivo único (registro-entregas.html, gerado pelo `npm run build`)
+// um script guarda o HTML original da página antes de o app mexer no DOM. Com
+// ele, a página do S3 é montada aqui mesmo, sem Node nem AWS CLI: é o caminho
+// para PCs onde não dá para baixar o repositório.
+const fonteDoArquivoUnico = window.fonteDoArquivoUnico;
+function gerarPaginaPublicada() {
+    if (!fonteDoArquivoUnico)
+        return;
+    if (registros.length === 0) {
+        alert("Não há entregas para publicar: importe o CSV primeiro.");
+        return;
+    }
+    // Mesmo formato do `npm run publicar --json`: "<" escapado para nenhum texto
+    // fechar a tag <script> antes da hora.
+    const json = JSON.stringify(registros).replaceAll("<", "\\u003c");
+    const scripts = [...document.querySelectorAll("script[data-app]")]
+        .map((script) => `<script data-app>${script.textContent ?? ""}</script>`)
+        .join("\n");
+    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}</script>\n${scripts}\n</body>`);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([pagina], { type: "text/html" }));
+    link.download = `registro-entregas-publicado-${new Date().toISOString().slice(0, 10)}.html`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
 function registroImportavel(valor) {
     if (typeof valor !== "object" || valor === null)
         return false;
@@ -834,6 +860,9 @@ filtroRelease.addEventListener("change", renderizarTabela);
 filtroSprint.addEventListener("change", renderizarTabela);
 filtroImpeditivo.addEventListener("change", renderizarTabela);
 botaoExportar.addEventListener("click", exportarJson);
+const botaoGerarPublicada = el("btn-gerar-publicada");
+botaoGerarPublicada.hidden = !fonteDoArquivoUnico;
+botaoGerarPublicada.addEventListener("click", gerarPaginaPublicada);
 campoImportar.addEventListener("change", importarJson);
 adicionarLinhaOkr();
 atualizarCamposCondicionais();

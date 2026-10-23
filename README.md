@@ -10,7 +10,74 @@ Dashboard das entregas do time (histórias, bugs, tasks, oportunidades e discove
 
 ---
 
-## 1. Colocar para funcionar no PC do trabalho
+## 0. No banco: usar sem baixar o repositório (passo a passo)
+
+Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos, código e o gerador da página do S3) está **num arquivo só**: [`registro-entregas.html`](registro-entregas.html). Não precisa de Node, Git nem AWS CLI; só um navegador e o console da AWS.
+
+### Passo 1: levar o arquivo para o PC do banco (uma vez, e a cada atualização)
+
+1. No navegador do banco, abra: <https://github.com/JayCesar/registro-entregas/blob/main/registro-entregas.html>
+2. **Se o download for permitido:** clique no ícone **Download raw file** (seta para baixo, no canto direito acima do código). Pronto, vá para o passo 2.
+3. **Se não for:** clique em **Raw**. Vai abrir uma página só com o código.
+   1. `Ctrl+A` e depois `Ctrl+C` para copiar tudo.
+   2. Abra o **Bloco de Notas** e cole com `Ctrl+V`.
+   3. Vá em **Arquivo → Salvar como** e preencha:
+      - **Nome:** `registro-entregas.html`
+      - **Tipo:** *Todos os arquivos (\*.\*)*, para não virar `.txt`
+      - **Codificação:** *UTF-8*
+   4. Salve numa pasta fixa, por exemplo `Documentos\registro-entregas\`.
+
+### Passo 2: abrir
+
+- Dê dois cliques no `registro-entregas.html`. Ele abre no Edge ou no Chrome.
+- **Use sempre o mesmo navegador.** As entregas importadas ficam guardadas nele, não no arquivo.
+
+**Senha da aba Edição:** o arquivo do GitHub vem com a senha `123`. Para usar outra só no seu PC, sem expô-la no GitHub:
+1. Abra o `registro-entregas.html` no Bloco de Notas.
+2. Com `Ctrl+F`, procure `SENHA_EDICAO = "123"` e troque o `123` pela sua senha.
+3. Salve. Lembre de repetir isso quando atualizar o arquivo.
+
+### Passo 3: criar a planilha (uma vez)
+
+1. Abra o Bloco de Notas, cole a linha abaixo e salve como `entregas.csv` (Tipo: *Todos os arquivos*, Codificação: *UTF-8*):
+   ```
+   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;complexidade;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo
+   ```
+2. Abra o `entregas.csv` no Excel. Cada nome vira uma coluna, porque o `;` é o separador padrão do Excel em pt-BR.
+3. Preencha uma linha por entrega. O formato de cada coluna está na seção 3.
+
+### Passo 4: toda semana
+
+1. Abra o `registro-entregas.html`, vá na aba **Edição** e entre com a senha.
+2. Clique em **Importar CSV** e escolha a planilha da semana. Se alguma linha tiver erro, nada entra e aparece a lista dos problemas. Corrija e importe de novo.
+3. Confira o resultado na aba **Entregas**.
+4. Clique em **Exportar JSON**. Esse arquivo é o seu **backup**: guarde-o.
+5. Clique em **Gerar página para o S3**. O navegador baixa o arquivo `registro-entregas-publicado-AAAA-MM-DD.html`, que é a página dos gestores, só leitura e com os dados dentro. Dê dois cliques nele para conferir.
+
+### Passo 5: subir no S3 e gerar o link de 1 hora (pelo console da AWS)
+
+1. Entre no **console da AWS**, abra o **S3** e entre no bucket.
+2. Clique em **Carregar** (*Upload*), adicione o `registro-entregas-publicado-AAAA-MM-DD.html` e confirme em **Carregar**.
+3. Volte à lista e **marque o arquivo** enviado.
+4. No menu **Ações do objeto** (*Object actions*), escolha **Compartilhar com um URL pré-assinado** (*Share with a presigned URL*).
+5. Em **Intervalo de tempo**, escolha **Horas: 1** e clique em **Criar URL pré-assinado**. O link já fica copiado.
+6. Mande o link para os gestores. Depois de 1 hora ele para de funcionar.
+
+> Para tirar a página do ar antes de 1 hora, apague o arquivo no bucket.
+
+### Atualizar o app quando houver versão nova
+
+Repita o **Passo 1**, salvando por cima do `registro-entregas.html` antigo. As entregas **não se perdem**, porque ficam no navegador e não no arquivo. Se você trocou a senha, troque de novo.
+
+### Se perder os dados do navegador
+
+Se o cache do navegador for limpo, se você trocar de navegador ou de PC:
+1. Abra o `registro-entregas.html` e vá na aba **Edição**.
+2. Clique em **Importar JSON** e escolha o último backup exportado no passo 4.
+
+---
+
+## 1. No seu PC (com Git e Node)
 
 ### Só visualizar ou editar localmente (não precisa instalar nada)
 
@@ -33,7 +100,7 @@ Configure as credenciais da AWS como o time já usa: `aws configure`, ou `aws ss
 
 ```bash
 npm install      # instala o TypeScript
-npm run build    # recompila src/ para dist/
+npm run build    # recompila src/ para dist/ e regenera o registro-entregas.html
 ```
 
 ---
@@ -230,6 +297,7 @@ Por que a página é **um arquivo só**: o link pré-assinado vale para um únic
 index.html            página (abas Entregas e Edição)
 style.css             estilos (tema escuro/claro, cores de destaque)
 favicon.svg           ícone da aba
+registro-entregas.html  app completo num arquivo só (gerado pelo `npm run build`; ver seção 0)
 src/*.ts              código-fonte (TypeScript, scripts clássicos sem módulos)
 dist/*.js             código compilado (versionado para abrir sem instalar nada)
 dados/                modelo do CSV; seus CSVs e JSONs exportados ficam aqui e não vão para o Git

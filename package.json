@@ -2,7 +2,7 @@
   "name": "registro-entregas",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/publicar.mjs --arquivo-unico",
     "watch": "tsc --watch",
     "publicar": "node scripts/publicar.mjs"
   },

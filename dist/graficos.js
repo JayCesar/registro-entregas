@@ -43,29 +43,6 @@ function passoDoEixo(maximo) {
     }
     return 1000;
 }
-// Degradê vertical de uma cor (cheia no topo, translúcida na base), criado uma
-// vez por cor em cada gráfico. Devolve o valor para `fill`: "url(#id)".
-function criarPreenchimentoDegrade(defs, cache, cor) {
-    const existente = cache.get(cor);
-    if (existente)
-        return existente;
-    const id = `colunas-degrade-${++degradesCriados}`;
-    const gradiente = criarSvg("linearGradient", { id, x1: 0, y1: 0, x2: 0, y2: 1 });
-    for (const [offset, opacidade] of [
-        ["0%", "1"],
-        ["100%", "0.35"],
-    ]) {
-        const parada = criarSvg("stop", { offset: offset ?? "0%" });
-        parada.style.stopColor = cor;
-        parada.style.stopOpacity = opacidade ?? "1";
-        gradiente.append(parada);
-    }
-    defs.append(gradiente);
-    const preenchimento = `url(#${id})`;
-    cache.set(cor, preenchimento);
-    return preenchimento;
-}
-let degradesCriados = 0;
 function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinimaColuna = 56) {
     const temGrupos = colunas.some((c) => c.grupo !== undefined);
     const margem = { topo: 30, direita: 12, base: temGrupos ? 60 : 34, esquerda: 40 };
@@ -88,9 +65,6 @@ function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinim
     const yBase = yDe(0);
     const svg = criarSvg("svg", { class: "grafico-svg", width: largura, height: altura, role: "img" });
     svg.setAttribute("aria-label", descricao);
-    const defs = criarSvg("defs");
-    svg.append(defs);
-    const degradesPorCor = new Map();
     // Linhas de grade e valores do eixo.
     for (let valor = 0; valor <= topoDoEixo; valor += passo) {
         svg.append(criarSvg("line", {
@@ -121,6 +95,26 @@ function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinim
         const direita = centro + larguraBarra / 2;
         const total = totais[indice] ?? 0;
         const visiveis = coluna.segmentos.filter((s) => s.valor > 0);
+        // Cada coluna é um grupo: no hover aparece o "cursor" (faixa clara atrás da
+        // coluna inteira) e as cores ficam cheias (ver style.css).
+        const grupo = criarSvg("g", { class: "grafico-coluna" });
+        const cursor = criarSvg("rect", {
+            class: "coluna-cursor",
+            x: x + 4,
+            y: margem.topo - 18,
+            width: Math.max(0, faixa - 8),
+            height: yBase - margem.topo + 18,
+            rx: 10,
+        });
+        // Fora dos segmentos (área vazia da faixa), o tooltip mostra o resumo da coluna.
+        const resumo = [
+            coluna.titulo,
+            ...visiveis.map((s) => `${s.rotulo}: ${s.valor}`),
+            ...(visiveis.length > 1 ? [`Total: ${total}`] : []),
+        ];
+        cursor.addEventListener("mousemove", (evento) => mostrarDica(evento, resumo));
+        cursor.addEventListener("mouseleave", esconderDica);
+        grupo.append(cursor);
         let acumulado = 0;
         for (const [posicao, segmento] of visiveis.entries()) {
             // Segmentos acima do primeiro deixam 2px de respiro para o de baixo.
@@ -135,17 +129,15 @@ function criarGraficoColunas(descricao, colunas, larguraDisponivel, larguraMinim
                 d: `M${esquerda},${base} V${topo + raio} Q${esquerda},${topo} ${esquerda + raio},${topo} ` +
                     `H${direita - raio} Q${direita},${topo} ${direita},${topo + raio} V${base} Z`,
             });
-            // Cada segmento tem o próprio degradê (bounding box), então numa coluna
-            // empilhada todos os tipos ficam com o mesmo "brilho" no topo.
-            marca.style.fill = criarPreenchimentoDegrade(defs, degradesPorCor, segmento.cor);
-            marca.style.stroke = segmento.cor;
+            marca.style.fill = segmento.cor;
             const linhas = [coluna.titulo, `${segmento.rotulo}: ${segmento.valor}`];
             if (coluna.segmentos.length > 1)
                 linhas.push(`Total: ${total}`);
             marca.addEventListener("mousemove", (evento) => mostrarDica(evento, linhas));
             marca.addEventListener("mouseleave", esconderDica);
-            svg.append(marca);
+            grupo.append(marca);
         }
+        svg.append(grupo);
         svg.append(criarSvg("text", { class: "grafico-total", x: centro, y: yDe(total) - 8, "text-anchor": "middle" }, total.toString()), criarSvg("text", { x: centro, y: yBase + 23, "text-anchor": "middle" }, coluna.rotulo));
         x += faixa;
     }

@@ -540,14 +540,25 @@ label.botao:hover {
   stroke: var(--borda);
 }
 
-/* Contorno fino na própria cor: mantém a forma da coluna onde o degradê fica claro. */
+/* Colunas levemente translúcidas (o sólido destoava do resto do site); no
+   hover da coluna, a cor fica cheia e o "cursor" clareia a faixa dela. */
 .grafico-segmento {
-  stroke-width: 1;
-  stroke-opacity: 0.6;
+  fill-opacity: 0.72;
+  transition: fill-opacity 0.15s;
 }
 
-.grafico-segmento:hover {
-  opacity: 0.8;
+.grafico-coluna:hover .grafico-segmento {
+  fill-opacity: 1;
+}
+
+.coluna-cursor {
+  fill: var(--texto);
+  fill-opacity: 0;
+  transition: fill-opacity 0.15s;
+}
+
+.grafico-coluna:hover .coluna-cursor {
+  fill-opacity: 0.06;
 }
 
 .dica-grafico {
