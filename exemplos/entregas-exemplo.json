@@ -24,6 +24,29 @@
   },
   {
     "id": "2026-r4-s1-02",
+    "tipo": "História",
+    "assunto": "Fila de reprocessamento de eventos",
+    "descricao": "DLQ com reprocessamento manual e alarme para eventos de liquidação com falha.",
+    "squad": "Squad Beta",
+    "siglas": ["JQ9"],
+    "dataInicio": "2026-10-02",
+    "dataFim": "2026-10-20",
+    "release": "4",
+    "sprint": "2",
+    "okrs": [
+      { "okr": "C", "grau": "Alto", "motivo": "Elimina perda de eventos de liquidação" },
+      { "okr": "B", "grau": "Baixo", "motivo": "Menos retrabalho operacional" }
+    ],
+    "impeditivo": "Bloqueado 6 dias aguardando liberação de fila no ambiente de homologação.",
+    "historia": { "funcional": false },
+    "gmud": { "nome": "GMUD-49017", "link": "https://gmud.exemplo.com.br/49017" },
+    "git": {
+      "linkPullRequest": "https://github.com/exemplo/liquidacao-worker/pull/207",
+      "linkActions": "https://github.com/exemplo/liquidacao-worker/actions/runs/7822334455"
+    }
+  },
+  {
+    "id": "2026-r4-s1-03",
     "tipo": "Bug",
     "assunto": "Timeout na emissão de boleto",
     "descricao": "Ajuste do timeout e retry com backoff na integração com o emissor.",
@@ -42,11 +65,49 @@
     "git": { "linkPullRequest": "https://github.com/exemplo/boleto-service/pull/88", "linkActions": null }
   },
   {
+    "id": "2026-r4-s1-04",
+    "tipo": "Task",
+    "assunto": "Atualização do Spring Boot para 3.4",
+    "descricao": "Upgrade de versão e correção de dependências depreciadas nos serviços da squad.",
+    "squad": "Squad Gama",
+    "siglas": ["FT5", "JQ9"],
+    "dataInicio": "2026-10-05",
+    "dataFim": "2026-10-14",
+    "release": "4",
+    "sprint": "1",
+    "okrs": [
+      { "okr": "C", "grau": "Baixo", "motivo": "Mantém a base suportada e sem CVEs conhecidas" }
+    ],
+    "impeditivo": "",
+    "historia": null,
+    "gmud": null,
+    "git": { "linkPullRequest": "https://github.com/exemplo/plataforma-commons/pull/141", "linkActions": null }
+  },
+  {
     "id": "2026-r4-s2-01",
+    "tipo": "Oportunidade",
+    "assunto": "Cache de taxas de câmbio",
+    "descricao": "Cache de 5 minutos para cotações, reduzindo chamadas ao provedor externo.",
+    "squad": "Squad Gama",
+    "siglas": ["JQ9"],
+    "dataInicio": "2026-10-13",
+    "dataFim": "2026-10-22",
+    "release": "4",
+    "sprint": "2",
+    "okrs": [
+      { "okr": "C", "grau": "Médio", "motivo": "Reduz custo com o provedor de cotações" }
+    ],
+    "impeditivo": "",
+    "historia": null,
+    "gmud": null,
+    "git": { "linkPullRequest": "https://github.com/exemplo/cambio-service/pull/64", "linkActions": null }
+  },
+  {
+    "id": "2026-r4-s2-02",
     "tipo": "Discovery",
     "assunto": "Mapeamento da jornada de onboarding PJ",
     "descricao": "Entrevistas com 8 clientes e mapa de dores do cadastro de empresas.",
-    "squad": "Squad Gama",
+    "squad": "Squad Alfa",
     "siglas": [],
     "dataInicio": "2026-10-13",
     "dataFim": "2026-10-24",

@@ -100,7 +100,7 @@ Opções do `npm run publicar`:
 
 ## 3. Formato do CSV
 
-O modelo está em `dados/modelo-entregas.csv`; um exemplo completo e preenchido está em `exemplos/entregas-exemplo.csv`.
+O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 entregas de **todos os tipos** (inclusive História funcional e não funcional), está em `exemplos/entregas-exemplo.csv`.
 
 - **Separador:** `;` (padrão do Excel em pt-BR). `,` também funciona.
 - **Codificação:** UTF-8 ou a padrão do Excel (Windows-1252). As duas são aceitas.
@@ -139,7 +139,16 @@ Os OKRs, a senha da aba de edição e as listas iniciais de squads e siglas fica
 
 ## 3.1 Formato do JSON (alternativa ao CSV)
 
-O **Importar JSON** aceita o arquivo do **Exportar JSON** (backup) e também um JSON escrito à mão. Um exemplo pronto para importar, com uma história completa, um bug com impeditivo e uma discovery só com os campos obrigatórios, está em [`exemplos/entregas-exemplo.json`](exemplos/entregas-exemplo.json).
+O **Importar JSON** aceita o arquivo do **Exportar JSON** (backup) e também um JSON escrito à mão. Um exemplo pronto para importar, com **todos os tipos**, está em [`exemplos/entregas-exemplo.json`](exemplos/entregas-exemplo.json):
+
+| Tipo | O que o exemplo mostra |
+|---|---|
+| História (funcional) | `historia` com BCP e complexidade, GMUD com link, PR + deploy (Actions), 2 OKRs |
+| História (não funcional) | `{ "funcional": false }` e impeditivo preenchido |
+| Bug | GMUD sem link (`"link": null`), só PR, impeditivo |
+| Task | sem GMUD (`"gmud": null`), duas siglas |
+| Oportunidade | sem GMUD, só PR |
+| Discovery | só os campos obrigatórios + OKR (sem `historia`, `gmud`, `git` e `impeditivo`) |
 
 O arquivo é uma **lista** `[ ... ]` com um objeto por entrega:
 
