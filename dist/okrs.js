@@ -235,10 +235,14 @@ function adicionarLinhaKr(lista, kr) {
     linha.append(codigo, titulo, criarBotao("Remover", "perigo", () => linha.remove()));
     lista.append(linha);
 }
-// Primeira letra livre (A, B, C...) no cadastro da tela; depois, O27, O28...
-// Não pula códigos que só existem em entregas: o OKR novo "A" assume as entregas com A.
+// Primeira letra livre (A, B, C...) entre o cadastro na tela e as entregas; depois, O27, O28...
+// Pula códigos de entregas antigas: um OKR novo nunca herda sem querer entregas de
+// um OKR que deixou de existir. Para herdar, digite o código antigo no campo.
 function proximoCodigoOkr() {
-    const usados = new Set([...listaCadastroOkrs.querySelectorAll(".okr-codigo")].map((c) => c.value.trim().toUpperCase()));
+    const usados = new Set([
+        ...[...listaCadastroOkrs.querySelectorAll(".okr-codigo")].map((c) => c.value.trim().toUpperCase()),
+        ...registros.flatMap((r) => r.okrs.map((o) => o.okr.toUpperCase())),
+    ]);
     for (let i = 0; i < 26; i++) {
         const letra = String.fromCharCode(65 + i);
         if (!usados.has(letra))
