@@ -38,7 +38,7 @@ Para quando não dá para clonar nem baixar o ZIP. O app inteiro (telas, estilos
 
 1. Abra o Bloco de Notas, cole a linha abaixo e salve como `entregas.csv` (Tipo: *Todos os arquivos*, Codificação: *UTF-8*):
    ```
-   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo;gmudEvidencias;tags
+   id;tipo;assunto;descricao;squad;siglas;dataInicio;dataFim;release;sprint;impeditivo;classificacao;bcp;gmudNome;gmudLink;git;linkPr;linkActions;okr1;okr1Grau;okr1Motivo;okr2;okr2Grau;okr2Motivo;okr3;okr3Grau;okr3Motivo;camadas;servicosAws;microsservicos;pessoas;gmudTitulo;gmudEvidencias;tags;itemNome;itemLink
    ```
 2. Abra o `entregas.csv` no Excel. Cada nome vira uma coluna, porque o `;` é o separador padrão do Excel em pt-BR.
 3. Preencha uma linha por entrega. O formato de cada coluna está na seção 3.
@@ -206,6 +206,8 @@ O modelo está em `dados/modelo-entregas.csv`. Um exemplo preenchido, com 20 ent
 | `id` | não | qualquer texto único. Se preenchido, reimportar **atualiza** a entrega em vez de duplicar | `2026-r4-01` |
 | `tipo` | **sim** | `História`, `Bug`, `Task`, `Oportunidade`, `Discovery` | `História` |
 | `assunto` | **sim** | texto curto | `Consulta de saldo consolidado` |
+| `itemNome` | não | nome do link do item no portal interno | `HIST-1234` |
+| `itemLink` | não no CSV (**sim** no formulário) | URL `https://...` do item (história, bug, discovery, board...) no portal | `https://portal.empresa/hist/1234` |
 | `descricao` | **sim** | o que foi feito | `Nova tela com saldo de todas as contas.` |
 | `squad` | **sim** | nome da squad; uma squad nova é aceita e passa a existir | `Squad Alfa` |
 | `siglas` | não | separadas por `\|`; siglas novas são aceitas (ficam em maiúsculas) | `FT5\|JQ9` |

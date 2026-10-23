@@ -20,6 +20,7 @@ function migrarRegistro(salvo) {
         servicosAws: salvo.servicosAws ?? [],
         microsservicos: salvo.microsservicos ?? [],
         tags: salvo.tags ?? [],
+        itemPortal: salvo.itemPortal ?? null,
         pessoas: salvo.pessoas ?? [],
     };
 }
@@ -251,6 +252,16 @@ function validar(dados, regrasDoFormulario = true) {
         erros.sprint = "Selecione a sprint.";
     if (!assunto)
         erros.assunto = "Informe o assunto.";
+    // Link do item no portal: obrigatório no formulário; no CSV, opcional (planilhas antigas).
+    const itemNome = texto(dados, "itemNome");
+    const itemLink = texto(dados, "itemLink");
+    if (itemLink && !urlValida(itemLink))
+        erros.itemLink = "Link inválido (use http:// ou https://).";
+    else if (!itemLink && regrasDoFormulario)
+        erros.itemLink = "Informe o link do item no portal.";
+    else if (!itemLink && itemNome)
+        erros.itemLink = "Informe o link do item (o nome sozinho não basta).";
+    const itemPortal = itemLink ? { nome: itemNome, link: itemLink } : null;
     if (!descricao)
         erros.descricao = "Descreva brevemente o que foi feito.";
     if (!dataInicio)
@@ -388,6 +399,7 @@ function validar(dados, regrasDoFormulario = true) {
             microsservicos,
             tags,
             pessoas,
+            itemPortal,
             dataInicio,
             dataFim,
             release,
@@ -692,6 +704,8 @@ function iniciarEdicao(registro) {
     marcarRadio("squad", registro.squad);
     definirValor("assunto", registro.assunto);
     definirValor("descricao", registro.descricao);
+    definirValor("itemNome", registro.itemPortal?.nome ?? "");
+    definirValor("itemLink", registro.itemPortal?.link ?? "");
     definirValor("dataInicio", registro.dataInicio);
     definirValor("dataFim", registro.dataFim);
     definirValor("release", registro.release ?? "");
@@ -844,6 +858,7 @@ function criarLinha(registro) {
     const colunas = [
         registro.tipo,
         registro.assunto,
+        registro.itemPortal ? criarLink(registro.itemPortal.link, registro.itemPortal.nome || "Abrir item") : VAZIO,
         registro.descricao,
         classificacao,
         bcp,
@@ -895,7 +910,7 @@ function passaNosFiltros(registro) {
 function mostrarTabelaVazia(texto) {
     const linha = document.createElement("tr");
     const celula = document.createElement("td");
-    celula.colSpan = 26;
+    celula.colSpan = 27;
     celula.className = "vazio";
     celula.textContent = texto;
     linha.append(celula);
@@ -1023,6 +1038,12 @@ function errosDoRegistroJson(r, posicao) {
     if (r.camadas !== undefined && (!Array.isArray(r.camadas) || !r.camadas.every((c) => pertence(CAMADAS, c)))) {
         erros.push(`${onde}: camadas deve ser uma lista com: ${lista(CAMADAS)}.`);
     }
+    if (r.itemPortal != null) {
+        const { nome, link } = r.itemPortal;
+        if (typeof nome !== "string" || typeof link !== "string" || !urlValida(link)) {
+            erros.push(`${onde}: itemPortal deve ser { "nome": texto, "link": "https://..." }.`);
+        }
+    }
     for (const campo of ["servicosAws", "microsservicos", "tags", "pessoas"]) {
         const valor = r[campo];
         if (valor !== undefined && (!Array.isArray(valor) || !valor.every((v) => typeof v === "string"))) {
@@ -1121,6 +1142,7 @@ function aplicarImportacao(importados) {
             servicosAws: r.servicosAws.length > 0 ? r.servicosAws : atual.servicosAws,
             microsservicos: r.microsservicos.length > 0 ? r.microsservicos : atual.microsservicos,
             tags: r.tags.length > 0 ? r.tags : atual.tags,
+            itemPortal: r.itemPortal ?? atual.itemPortal,
             pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
             // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
             okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
