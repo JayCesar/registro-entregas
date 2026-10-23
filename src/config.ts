@@ -14,8 +14,8 @@ const CORES_OKR = ["var(--okr-1)", "var(--okr-2)", "var(--okr-3)", "var(--okr-4)
 
 const SIGLAS = ["FT5", "JQ9"] as const;
 
-// Opções de exemplo: substitua pelas squads reais.
-const SQUADS = ["Squad Alfa", "Squad Beta", "Squad Gama"] as const;
+// Squads fixas: começa vazia; as reais são cadastradas pelo "+ Nova squad".
+const SQUADS: readonly string[] = [];
 
 // Atenção: "História" e "Bug" são usados nas regras de campos condicionais
 // em app.ts. Renomear esses dois exige ajustar lá também.

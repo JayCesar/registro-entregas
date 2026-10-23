@@ -614,6 +614,11 @@ function preencherSquadsESiglas(): void {
   const squadAtual = radioMarcado("squad");
   listaSquads.replaceChildren();
   for (const squad of squadsDisponiveis()) adicionarSquad(squad);
+  if (squadsDisponiveis().length === 0) {
+    listaSquads.append(
+      Object.assign(document.createElement("span"), { className: "dica", textContent: "Nenhuma squad ainda: use “+ Nova squad”." }),
+    );
+  }
   marcarRadio("squad", squadAtual);
 
   for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_PESSOAS]) refazerLista(alvo);
@@ -626,6 +631,7 @@ function cadastrarSquad(nome: string): string | null {
   if (!existente) {
     squadsCadastradas.push(nome);
     localStorage.setItem(CHAVE_SQUADS, JSON.stringify(squadsCadastradas));
+    listaSquads.querySelector("span.dica")?.remove();
     adicionarSquad(nome);
   }
   marcarRadio("squad", existente ?? nome);
