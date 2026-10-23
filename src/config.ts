@@ -5,9 +5,9 @@
 // Squads e siglas são só as opções iniciais: novas podem ser cadastradas no
 // próprio formulário (ver squadsDisponiveis/siglasDisponiveis em app.ts).
 
-// OKRs iniciais: valem enquanto nenhum for cadastrado na aba de edição
-// (cartão "OKRs e KRs", ver okrs.ts). Depois, a lista vem do cadastro.
-const OKRS = ["A", "B", "C"] as const;
+// OKRs iniciais: começa vazia. Os OKRs vêm do cadastro na aba de edição
+// (cartão "OKRs e KRs", ver okrs.ts).
+const OKRS: readonly string[] = [];
 
 // Cor de cada OKR (cartões do dashboard e seletor do formulário), em rodízio pela ordem do cadastro.
 const CORES_OKR = ["var(--okr-1)", "var(--okr-2)", "var(--okr-3)", "var(--okr-4)"];

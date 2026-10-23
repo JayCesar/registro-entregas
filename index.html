@@ -315,19 +315,13 @@
             <small class="erro" data-erro="classificacao"></small>
           </fieldset>
 
-          <!-- Para toda História, funcional ou não -->
-          <div class="campo">
-            <label for="complexidade">Complexidade</label>
-            <input type="number" id="complexidade" name="complexidade" min="0" step="any">
-            <small class="erro" data-erro="complexidade"></small>
-          </div>
         </div>
 
         <!-- Só para História funcional -->
         <div class="grade" id="sec-funcional" hidden>
           <div class="campo">
-            <label for="bcp">BCP *</label>
-            <input type="text" id="bcp" name="bcp">
+            <label for="bcp">BCP-Score *</label>
+            <input type="number" id="bcp" name="bcp" step="any" placeholder="Ex.: 82">
             <small class="erro" data-erro="bcp"></small>
           </div>
         </div>
@@ -503,8 +497,7 @@
               <th>Assunto</th>
               <th>Descrição</th>
               <th>Classificação</th>
-              <th>BCP</th>
-              <th>Complexidade</th>
+              <th>BCP-Score</th>
               <th>GMUD</th>
               <th>OKRs impactados</th>
               <th>PDI</th>
@@ -541,10 +534,10 @@
           <input type="file" id="importar-okrs" accept="application/json,.json" hidden>
         </div>
       </div>
-      <p class="dica">Cada OKR tem um código (o que vai no CSV, ex.: A) e seus KRs. Nas entregas, você escolhe o OKR e o KR que ela move. OKR ou KR usado por alguma entrega não pode ser removido.</p>
+      <p class="dica">Organize por <strong>objetivo</strong> (ex.: Cliente). Cada objetivo tem seus <strong>OKRs</strong>, e cada OKR tem os <strong>KRs</strong> (KR1, KR2…). O código do OKR (A, B…) é preenchido sozinho e é o que vai no CSV. OKR ou KR usado por alguma entrega não pode ser removido.</p>
       <div class="okrs-cadastro" id="okrs-cadastro"></div>
       <div class="acoes-form">
-        <button type="button" id="btn-adicionar-objetivo" class="secundario">+ Adicionar OKR</button>
+        <button type="button" id="btn-adicionar-objetivo" class="secundario">+ Novo objetivo</button>
         <button type="button" id="btn-salvar-okrs">Salvar OKRs</button>
         <span class="dica" id="okrs-status"></span>
       </div>

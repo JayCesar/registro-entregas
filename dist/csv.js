@@ -36,6 +36,7 @@ const COLUNAS_CSV_OPCIONAIS = [
     "impeditivo",
     "classificacao",
     "bcp",
+    // Campo removido: a coluna ainda é aceita (planilhas antigas), mas é ignorada.
     "complexidade",
     "gmudNome",
     "gmudTitulo",
@@ -180,8 +181,6 @@ function formDataDaLinha(linha, numerosOkr, erros) {
     dados.set("sprint", valor("sprint").replace(/^s/i, ""));
     // Aceita "nao-funcional", "Não funcional"...
     dados.set("classificacao", semAcento(valor("classificacao")).replace(/\s+/g, "-"));
-    // Aceita vírgula decimal ("3,5").
-    dados.set("complexidade", valor("complexidade").replace(",", "."));
     for (const coluna of ["dataInicio", "dataFim"]) {
         const data = dataIsoDoCsv(valor(coluna));
         if (valor(coluna) && !data)
@@ -241,7 +240,7 @@ function formDataDaLinha(linha, numerosOkr, erros) {
         const codigo = canonico(okrsDisponiveis(), okr);
         dados.append("okr", codigo);
         // KR opcional ("KR1", "kr1"...): em branco = o OKR como um todo.
-        dados.append("okrKr", kr ? canonico(objetivoDe(codigo)?.krs.map((k) => k.codigo) ?? [], kr) : "");
+        dados.append("okrKr", kr ? canonico(okrDe(codigo)?.krs.map((k) => k.codigo) ?? [], kr) : "");
         dados.append("okrGrau", canonico(GRAUS_IMPACTO, grau));
         dados.append("okrMotivo", motivo);
     }

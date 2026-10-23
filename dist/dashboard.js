@@ -734,7 +734,8 @@ function criarCartaoOkr(okr, indice, doOkr, total) {
         el("dash-okr-detalhe").scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
     cartao.style.setProperty("--cor-tipo", CORES_OKR[indice % CORES_OKR.length] ?? "var(--destaque)");
-    const titulo = objetivoDe(okr)?.titulo.trim();
+    const titulo = okrDe(okr)?.titulo.trim();
+    const objetivo = okrDe(okr)?.objetivo.trim();
     cartao.setAttribute("aria-pressed", String(selecionado));
     cartao.disabled = semEntregas;
     const capa = criarElemento("span", "entrega-capa capa-okr");
@@ -758,7 +759,7 @@ function criarCartaoOkr(okr, indice, doOkr, total) {
         linhas.append(linha);
     }
     const info = criarElemento("span", "okr-info");
-    info.append(criarElemento("strong", "okr-nome", `OKR ${okr}`), ...(titulo ? [criarElemento("span", "okr-titulo", titulo)] : []), numero, barra, linhas, criarMedidorIntensidade(intensidadeMedia(doOkr)), criarElemento("span", "tipo-acao", semEntregas ? "Sem entregas na seleção" : selecionado ? "Em detalhe abaixo ↓" : "Clique para ver as entregas"));
+    info.append(...(objetivo ? [criarElemento("span", "okr-objetivo", objetivo)] : []), criarElemento("strong", "okr-nome", titulo || `OKR ${okr}`), ...(titulo ? [criarElemento("span", "okr-titulo", `OKR ${okr}`)] : []), numero, barra, linhas, criarMedidorIntensidade(intensidadeMedia(doOkr)), criarElemento("span", "tipo-acao", semEntregas ? "Sem entregas na seleção" : selecionado ? "Em detalhe abaixo ↓" : "Clique para ver as entregas"));
     cartao.append(capa, info);
     return cartao;
 }
@@ -769,7 +770,7 @@ function criarDetalheOkr(okr, doOkr) {
     const titulo = criarElemento("div");
     titulo.append(criarElemento("h3", "", `Como as entregas impactam o ${rotuloOkr(okr)}`), criarElemento("p", "dica", "Cada linha é uma entrega: o grau diz o quanto ela move o OKR, o motivo diz por quê. Clique para abrir a entrega."));
     // Quantas entregas em cada KR (e no OKR como um todo), na ordem do cadastro.
-    const krs = comExtras(objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [], doOkr.flatMap(({ impacto }) => (impacto.kr ? [impacto.kr] : [])));
+    const krs = comExtras(okrDe(okr)?.krs.map((k) => k.codigo) ?? [], doOkr.flatMap(({ impacto }) => (impacto.kr ? [impacto.kr] : [])));
     const porKr = criarElemento("div", "okr-krs");
     for (const kr of [...krs, ""]) {
         const quantidade = doOkr.filter(({ impacto }) => (impacto.kr ?? "") === kr).length;
@@ -963,8 +964,7 @@ function abrirDetalhesEntrega(registro) {
     if (historia) {
         adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
         if (historia.funcional)
-            adicionarDetalhe(detalhes, "BCP", historia.bcp);
-        adicionarDetalhe(detalhes, "Complexidade", historia.complexidade?.toString() ?? VAZIO);
+            adicionarDetalhe(detalhes, "BCP-Score", historia.bcp);
     }
     if (gmud)
         adicionarDetalhe(detalhes, "GMUD", rotuloGmud(gmud));

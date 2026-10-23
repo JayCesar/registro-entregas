@@ -210,7 +210,7 @@ function validar(dados, exigirCamada = true) {
         const valorKr = krsInformados[indice];
         const kr = typeof valorKr === "string" ? valorKr.trim() : "";
         const linha = `OKR ${okr || indice + 1}`;
-        const krsDoOkr = objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [];
+        const krsDoOkr = okrDe(okr)?.krs.map((k) => k.codigo) ?? [];
         if (!pertence(okrsDisponiveis(), okr)) {
             erros.okrs ??= `${linha}: OKR desconhecido (cadastre-o no cartão "OKRs e KRs").`;
         }
@@ -262,19 +262,17 @@ function validar(dados, exigirCamada = true) {
     let historia = null;
     if (tipo === "História") {
         const classificacao = texto(dados, "classificacao");
-        const complexidadeTexto = texto(dados, "complexidade");
-        const complexidade = complexidadeTexto === "" ? null : Number(complexidadeTexto);
-        if (complexidade !== null && (!Number.isFinite(complexidade) || complexidade < 0)) {
-            erros.complexidade = "Informe um número maior ou igual a zero.";
-        }
         if (classificacao === "funcional") {
-            const bcp = texto(dados, "bcp");
+            // Aceita vírgula decimal ("7,5").
+            const bcp = texto(dados, "bcp").replace(",", ".");
             if (!bcp)
-                erros.bcp = "BCP é obrigatório para história funcional.";
-            historia = { funcional: true, bcp, complexidade };
+                erros.bcp = "BCP-Score é obrigatório para história funcional.";
+            else if (!Number.isFinite(Number(bcp)))
+                erros.bcp = "O BCP-Score deve ser um número.";
+            historia = { funcional: true, bcp };
         }
         else if (classificacao === "nao-funcional") {
-            historia = { funcional: false, complexidade };
+            historia = { funcional: false };
         }
         else {
             erros.classificacao = "Informe se a história é funcional ou não funcional.";
@@ -666,7 +664,6 @@ function iniciarEdicao(registro) {
     definirValor("impeditivo", registro.impeditivo);
     if (registro.historia) {
         marcarRadio("classificacao", registro.historia.funcional ? "funcional" : "nao-funcional");
-        definirValor("complexidade", registro.historia.complexidade?.toString() ?? "");
         if (registro.historia.funcional)
             definirValor("bcp", registro.historia.bcp);
     }
@@ -747,10 +744,8 @@ function criarLinha(registro) {
     const { historia, gmud, git } = registro;
     let classificacao = VAZIO;
     let bcp = VAZIO;
-    let complexidade = VAZIO;
     if (historia) {
         classificacao = historia.funcional ? "Funcional" : "Não funcional";
-        complexidade = historia.complexidade?.toString() ?? VAZIO;
         if (historia.funcional)
             bcp = historia.bcp;
     }
@@ -778,7 +773,6 @@ function criarLinha(registro) {
         registro.descricao,
         classificacao,
         bcp,
-        complexidade,
         gmud ? (gmud.link ? criarLink(gmud.link, rotuloGmud(gmud)) : rotuloGmud(gmud)) : VAZIO,
         okrs,
         textoDoVinculoPdi(registro.pdi), // pdi.ts
@@ -825,7 +819,7 @@ function passaNosFiltros(registro) {
 function mostrarTabelaVazia(texto) {
     const linha = document.createElement("tr");
     const celula = document.createElement("td");
-    celula.colSpan = 25;
+    celula.colSpan = 24;
     celula.className = "vazio";
     celula.textContent = texto;
     linha.append(celula);
@@ -890,8 +884,8 @@ async function gerarPaginaPublicada() {
     // fechar a tag <script> antes da hora.
     const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
     const tagPdi = await tagDoPdiPublicado();
-    // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
-    const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
+    // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarOkrsCadastrados em okrs.ts).
+    const okrs = JSON.stringify(carregarOkrsCadastrados()).replaceAll("<", "\\u003c");
     const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}</script>\n`;
     // Foto do cabeçalho (perfil.ts): quem abre o link não tem o localStorage de quem publica.
     const foto = lerFoto();
