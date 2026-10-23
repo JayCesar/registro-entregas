@@ -3,10 +3,10 @@
 Dashboard das entregas do time (histórias, bugs, tasks, oportunidades e discoveries), com lead time, impacto nos OKRs, volumetria por release/sprint e o detalhe de cada entrega.
 
 - **Sem servidor e sem banco:** é HTML + CSS + JavaScript. Abre direto do arquivo (`index.html`) ou de um bucket S3.
-- **Os dados vêm de um CSV** que você vai preenchendo a cada entrega nova.
+- **Os dados entram por CSV**: você preenche durante a semana e importa no site no fim de semana.
 - **Para mostrar aos gestores**, o projeto gera uma página única com tudo embutido. Ela sobe para um bucket S3 privado e é compartilhada por um link que vale 1 hora.
 
-> Os dados reais **nunca** vão para o GitHub: `dados/entregas.csv` e a pasta `publicar/` estão no `.gitignore`.
+> Os dados reais **nunca** vão para o GitHub: tudo em `dados/` (menos o modelo) e a pasta `publicar/` estão no `.gitignore`.
 
 ---
 
@@ -38,38 +38,45 @@ npm run build    # recompila src/ para dist/
 
 ---
 
-## 2. Fluxo a cada entrega nova
+## 2. Fluxo semanal
 
 ```
-dados/entregas.csv  ──(preenche no Excel)──►  npm run publicar  ──►  publicar/index.html  ──►  S3 + link de 1h
+durante a semana            fim de semana (no seu PC)                                   gestores
+────────────────            ─────────────────────────                                   ────────
+planilha CSV  ──►  site local: Importar CSV  ──►  Exportar JSON  ──►  npm run publicar  ──►  link de 1h (S3)
+                   (acumula com as semanas)        (tudo até hoje)    (página única)
 ```
 
-1. **Primeira vez:** copie o modelo para criar sua planilha:
-   ```bash
-   cp dados/modelo-entregas.csv dados/entregas.csv
-   ```
-2. **Abra `dados/entregas.csv` no Excel** e adicione uma linha por entrega (formato na seção 3). Salve como **CSV (separado por ponto e vírgula)** ou **CSV UTF-8**.
-3. **Gere a página:**
-   ```bash
-   npm run publicar
-   ```
-4. **Abra `publicar/index.html` no navegador para conferir.** Se alguma linha do CSV tiver problema, aparece um aviso com o número da linha e o motivo, e essa linha fica fora da página. Corrija e gere de novo.
-5. **Suba e gere o link de 1h:**
+**Durante a semana:** copie `dados/modelo-entregas.csv` para começar a planilha e adicione uma linha por entrega no Excel. Salve como **CSV (separado por ponto e vírgula)** ou **CSV UTF-8**. O formato está na seção 3.
+
+**No fim de semana:**
+
+1. **Importe no site local.** Abra o `index.html`, vá na aba **Edição** (senha em `src/config.ts`) e clique em **Importar CSV**. A importação é "tudo ou nada": se alguma linha tiver erro, nada entra e aparece a lista dos problemas por linha. As entregas se **somam** às das semanas anteriores.
+2. **Confira** na aba **Entregas** se ficou como esperado.
+3. **Exporte.** Na aba **Edição**, clique em **Exportar JSON**. O arquivo (`registro-entregas-aaaa-mm-dd.json`) tem **todas** as entregas até hoje. Guarde-o em `dados/`: ele é o seu backup e o que vai para o S3.
+4. **Publique e gere o link de 1h:**
    ```bash
    npm run publicar -- --bucket NOME-DO-BUCKET
    ```
-   O comando imprime o link. É só mandar para os gestores.
+   Sem `--json`, o script usa o `registro-entregas-*.json` mais recente da pasta `dados/`. Para usar outro arquivo: `--json caminho/do/arquivo.json`.
+   O comando sobe a página e imprime o link. É só mandar para os gestores.
 
-Opções do comando:
+Quer conferir antes de subir? Rode sem `--bucket` (`npm run publicar`) e abra `publicar/index.html` no navegador.
+
+**Cuidados com os dados:**
+
+- **Os dados acumulados ficam no navegador** (localStorage) do PC onde você importa. Se o cache do navegador for limpo, ou se você trocar de PC ou de navegador, eles somem dali. Para recuperar, use **Importar JSON** com o último arquivo exportado. Por isso o passo 3 é toda semana.
+- **Não importe a mesma linha duas vezes.** Use um CSV novo por semana, só com as entregas novas. Se preferir manter uma planilha única e reimportar tudo, **preencha a coluna `id`**: aí reimportar atualiza a entrega em vez de duplicar.
+
+Opções do `npm run publicar`:
 
 | Opção | Padrão | O que faz |
 |---|---|---|
+| `--json` | o `registro-entregas-*.json` mais recente em `dados/` | arquivo do "Exportar JSON" a publicar |
+| `--csv` | (nenhum) | publicar direto de um CSV, sem passar pelo site |
 | `--bucket` | (nenhum) | sobe para o S3 e gera o link; sem ele, só gera o arquivo |
 | `--chave` | `registro-entregas/index.html` | caminho do arquivo dentro do bucket |
 | `--expira` | `3600` | validade do link em segundos (3600 = 1h) |
-| `--csv` | `dados/entregas.csv` | usar outro CSV |
-
-> **Conferir antes de publicar (opcional):** no `index.html` local, aba **Edição** (senha em `src/config.ts`), botão **Importar CSV**. A importação é "tudo ou nada" e lista os erros por linha.
 
 ---
 
@@ -141,7 +148,7 @@ style.css             estilos (tema escuro/claro, cores de destaque)
 favicon.svg           ícone da aba
 src/*.ts              código-fonte (TypeScript, scripts clássicos sem módulos)
 dist/*.js             código compilado (versionado para abrir sem instalar nada)
-dados/                modelo do CSV (o seu entregas.csv fica aqui e não vai para o Git)
+dados/                modelo do CSV; seus CSVs e JSONs exportados ficam aqui e não vão para o Git
 exemplos/             CSV de exemplo preenchido
 scripts/publicar.mjs  gera a página única e, opcionalmente, sobe para o S3
 ```

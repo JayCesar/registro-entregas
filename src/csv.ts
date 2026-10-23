@@ -337,19 +337,39 @@ campoImportarCsv.addEventListener("change", importarCsv);
 
 // ---------- Versão publicada (página única para o S3) ----------
 
-// `npm run publicar` (scripts/publicar.mjs) embute o CSV das entregas nesta tag.
-// Nesse modo a página é só leitura: os registros vêm do arquivo embutido, não do
-// localStorage de quem abre, e a aba de edição some (ver style.css).
-const csvPublicado = document.getElementById("dados-publicados")?.textContent ?? null;
-if (csvPublicado !== null) {
-  const { registros: publicados, erros } = registrosDoCsv(csvPublicado);
+// `npm run publicar` (scripts/publicar.mjs) embute os dados nesta tag: o JSON do
+// botão "Exportar JSON" (fluxo semanal) ou um CSV. Nesse modo a página é só
+// leitura: os registros vêm do arquivo embutido, não do localStorage de quem
+// abre, e a aba de edição some (ver style.css).
+const tagPublicada = document.getElementById("dados-publicados");
+
+// Mesmo formato e mesma checagem da importação de JSON da aba de edição.
+function registrosDoJsonPublicado(conteudo: string): { registros: Registro[]; erros: string[] } {
+  try {
+    const dados: unknown = JSON.parse(conteudo);
+    if (!Array.isArray(dados)) return { registros: [], erros: ["O JSON publicado não é uma lista de entregas."] };
+    const validos = dados.filter(registroImportavel);
+    const erros =
+      validos.length < dados.length ? [`${dados.length - validos.length} entrega(s) com formato inválido.`] : [];
+    return { registros: validos.map(migrarRegistro), erros };
+  } catch {
+    return { registros: [], erros: ["O JSON publicado está corrompido."] };
+  }
+}
+
+if (tagPublicada) {
+  const conteudo = tagPublicada.textContent ?? "";
+  const { registros: publicados, erros } =
+    tagPublicada.getAttribute("type") === "application/json"
+      ? registrosDoJsonPublicado(conteudo)
+      : registrosDoCsv(conteudo);
   // Linhas inválidas ficam de fora. Abrindo o arquivo gerado no próprio PC
   // (file://), antes de subir para o S3, quem publica vê o aviso com os erros.
   if (erros.length > 0) {
-    console.warn("Linhas do CSV publicado ignoradas:", erros);
+    console.warn("Entregas publicadas ignoradas:", erros);
     if (location.protocol === "file:") {
       const exibidos = erros.slice(0, MAXIMO_ERROS_EXIBIDOS).join("\n");
-      alert(`Atenção: ${erros.length} problema(s) no CSV; essas linhas ficaram fora da página.\n\n${exibidos}`);
+      alert(`Atenção: ${erros.length} problema(s) nos dados; essas entregas ficaram fora da página.\n\n${exibidos}`);
     }
   }
   registros = publicados;
