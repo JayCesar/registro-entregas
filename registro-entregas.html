@@ -4005,6 +4005,53 @@ button.pdi-entrega {
   }
 }
 
+/* ---------- Hover dos cards do dashboard ---------- */
+
+/* Todo card ganha contorno e brilho na cor dele (a do tipo, da camada, do ponto
+   do PDI) ou, sem cor própria, na de destaque. Os pequenos também sobem um pouco. */
+#painel-dashboard .indicador,
+#painel-dashboard .cartao.grafico,
+#painel-dashboard .camada-cartao,
+#painel-dashboard .okr-detalhe,
+#painel-dashboard .pdi-ponto {
+  --cor-hover: var(--destaque);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+#painel-dashboard .camada-cartao {
+  --cor-hover: var(--cor-camada);
+}
+
+#painel-dashboard .pdi-ponto {
+  --cor-hover: var(--cor-ponto);
+}
+
+#painel-dashboard .indicador:hover,
+#painel-dashboard .cartao.grafico:hover,
+#painel-dashboard .camada-cartao:hover,
+#painel-dashboard .okr-detalhe:hover,
+#painel-dashboard .pdi-ponto:hover,
+#painel-dashboard .entrega:hover .entrega-capa {
+  border-color: var(--cor-hover, var(--cor-tipo));
+  box-shadow:
+    0 0 0 1px var(--cor-hover, var(--cor-tipo)),
+    0 16px 36px -16px color-mix(in srgb, var(--cor-hover, var(--cor-tipo)) 60%, transparent);
+}
+
+#painel-dashboard .indicador:hover,
+#painel-dashboard .camada-cartao:hover,
+#painel-dashboard .pdi-ponto:hover {
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #painel-dashboard .indicador:hover,
+  #painel-dashboard .camada-cartao:hover,
+  #painel-dashboard .pdi-ponto:hover {
+    transform: none;
+  }
+}
+
 /* ---------- Versão publicada (só leitura) ---------- */
 
 body[data-publicado] #aba-edicao,
