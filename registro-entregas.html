@@ -4005,6 +4005,53 @@ button.pdi-entrega {
   }
 }
 
+/* ---------- Hover dos cards do dashboard ---------- */
+
+/* Todo card ganha contorno e brilho na cor dele (a do tipo, da camada, do ponto
+   do PDI) ou, sem cor própria, na de destaque. Os pequenos também sobem um pouco. */
+#painel-dashboard .indicador,
+#painel-dashboard .cartao.grafico,
+#painel-dashboard .camada-cartao,
+#painel-dashboard .okr-detalhe,
+#painel-dashboard .pdi-ponto {
+  --cor-hover: var(--destaque);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+#painel-dashboard .camada-cartao {
+  --cor-hover: var(--cor-camada);
+}
+
+#painel-dashboard .pdi-ponto {
+  --cor-hover: var(--cor-ponto);
+}
+
+#painel-dashboard .indicador:hover,
+#painel-dashboard .cartao.grafico:hover,
+#painel-dashboard .camada-cartao:hover,
+#painel-dashboard .okr-detalhe:hover,
+#painel-dashboard .pdi-ponto:hover,
+#painel-dashboard .entrega:hover .entrega-capa {
+  border-color: var(--cor-hover, var(--cor-tipo));
+  box-shadow:
+    0 0 0 1px var(--cor-hover, var(--cor-tipo)),
+    0 16px 36px -16px color-mix(in srgb, var(--cor-hover, var(--cor-tipo)) 60%, transparent);
+}
+
+#painel-dashboard .indicador:hover,
+#painel-dashboard .camada-cartao:hover,
+#painel-dashboard .pdi-ponto:hover {
+  transform: translateY(-3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #painel-dashboard .indicador:hover,
+  #painel-dashboard .camada-cartao:hover,
+  #painel-dashboard .pdi-ponto:hover {
+    transform: none;
+  }
+}
+
 /* ---------- Versão publicada (só leitura) ---------- */
 
 body[data-publicado] #aba-edicao,
@@ -4592,8 +4639,8 @@ const OKRS = ["A", "B", "C"];
 // Cor de cada OKR (cartões do dashboard e seletor do formulário), em rodízio pela ordem do cadastro.
 const CORES_OKR = ["var(--okr-1)", "var(--okr-2)", "var(--okr-3)", "var(--okr-4)"];
 const SIGLAS = ["FT5", "JQ9"];
-// Opções de exemplo: substitua pelas squads reais.
-const SQUADS = ["Squad Alfa", "Squad Beta", "Squad Gama"];
+// Squads fixas: começa vazia; as reais são cadastradas pelo "+ Nova squad".
+const SQUADS = [];
 // Atenção: "História" e "Bug" são usados nas regras de campos condicionais
 // em app.ts. Renomear esses dois exige ajustar lá também.
 const TIPOS_ITEM = ["História", "Bug", "Oportunidade", "Discovery", "Task"];
@@ -5163,6 +5210,9 @@ function preencherSquadsESiglas() {
     listaSquads.replaceChildren();
     for (const squad of squadsDisponiveis())
         adicionarSquad(squad);
+    if (squadsDisponiveis().length === 0) {
+        listaSquads.append(Object.assign(document.createElement("span"), { className: "dica", textContent: "Nenhuma squad ainda: use “+ Nova squad”." }));
+    }
     marcarRadio("squad", squadAtual);
     for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_PESSOAS])
         refazerLista(alvo);
@@ -5175,6 +5225,7 @@ function cadastrarSquad(nome) {
     if (!existente) {
         squadsCadastradas.push(nome);
         localStorage.setItem(CHAVE_SQUADS, JSON.stringify(squadsCadastradas));
+        listaSquads.querySelector("span.dica")?.remove();
         adicionarSquad(nome);
     }
     marcarRadio("squad", existente ?? nome);
@@ -5556,10 +5607,15 @@ async function gerarPaginaPublicada() {
     // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
     const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
     const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}<\/script>\n`;
+    // Foto do cabeçalho (perfil.ts): quem abre o link não tem o localStorage de quem publica.
+    const foto = lerFoto();
+    const tagFoto = foto
+        ? `<script type="application/json" id="foto-publicada">${JSON.stringify(foto).replaceAll("<", "\\u003c")}<\/script>\n`
+        : "";
     const scripts = [...document.querySelectorAll("script[data-app]")]
         .map((script) => `<script data-app>${script.textContent ?? ""}<\/script>`)
         .join("\n");
-    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}<\/script>\n${tagOkrs}${tagPdi}${scripts}\n</body>`);
+    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}<\/script>\n${tagOkrs}${tagFoto}${tagPdi}${scripts}\n</body>`);
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([pagina], { type: "text/html" }));
     link.download = `registro-entregas-publicado-${new Date().toISOString().slice(0, 10)}.html`;
@@ -6507,7 +6563,8 @@ if (tagPublicada) {
 // O nome vem de config.ts (NOME_RESPONSAVEL). A foto é enviada na aba de edição,
 // recortada em quadrado, reduzida e guardada no localStorage como data URL:
 // como os registros, ela vale só para este navegador. Sem foto, o cabeçalho
-// mostra as iniciais do nome.
+// mostra as iniciais do nome. Na página publicada a foto vai embutida
+// (#foto-publicada, ver gerarPaginaPublicada em app.ts).
 const CHAVE_FOTO = "registro-entregas:foto";
 // Lado da foto salva, em pixels. O cabeçalho exibe menor; a folga cobre telas de alta densidade.
 const LADO_FOTO = 256;
@@ -6526,8 +6583,18 @@ function iniciais(nome) {
     const ultima = partes.length > 1 ? (partes.at(-1)?.[0] ?? "") : "";
     return (primeira + ultima).toUpperCase();
 }
+// Na página publicada a foto vem só do próprio arquivo (JSON com o data URL);
+// sem ela, ficam as iniciais, e nunca a foto do navegador de quem abre.
+const ehPaginaPublicada = document.getElementById("dados-publicados") !== null;
+const fotoPublicada = document.getElementById("foto-publicada")?.textContent;
 function lerFoto() {
     try {
+        if (ehPaginaPublicada) {
+            if (!fotoPublicada)
+                return null;
+            const foto = JSON.parse(fotoPublicada);
+            return typeof foto === "string" && foto.startsWith("data:image/") ? foto : null;
+        }
         return localStorage.getItem(CHAVE_FOTO);
     }
     catch {

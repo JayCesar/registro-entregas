@@ -11,8 +11,8 @@ const OKRS = ["A", "B", "C"];
 // Cor de cada OKR (cartões do dashboard e seletor do formulário), em rodízio pela ordem do cadastro.
 const CORES_OKR = ["var(--okr-1)", "var(--okr-2)", "var(--okr-3)", "var(--okr-4)"];
 const SIGLAS = ["FT5", "JQ9"];
-// Opções de exemplo: substitua pelas squads reais.
-const SQUADS = ["Squad Alfa", "Squad Beta", "Squad Gama"];
+// Squads fixas: começa vazia; as reais são cadastradas pelo "+ Nova squad".
+const SQUADS = [];
 // Atenção: "História" e "Bug" são usados nas regras de campos condicionais
 // em app.ts. Renomear esses dois exige ajustar lá também.
 const TIPOS_ITEM = ["História", "Bug", "Oportunidade", "Discovery", "Task"];
