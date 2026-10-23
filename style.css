@@ -1912,8 +1912,43 @@ button.hero-explorar .icone {
 }
 
 
+/* Mês como divisor bem visível: barra de destaque, nome grande, contagem em
+   pílula e uma linha que corre até a borda. */
+.entregas {
+  gap: 48px;
+}
+
+.entregas-mes {
+  gap: 20px;
+}
+
 .entregas-mes h3 {
-  font-size: 1.05rem;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding-left: 16px;
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  border-left: 4px solid var(--destaque);
+}
+
+.entregas-mes h3 .dica {
+  flex: none;
+  padding: 3px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+}
+
+.entregas-mes h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--borda);
 }
 
 .etiqueta {
