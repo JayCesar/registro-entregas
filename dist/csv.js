@@ -43,6 +43,8 @@ const COLUNAS_CSV_OPCIONAIS = [
     "gmudTitulo",
     "gmudLink",
     "gmudEvidencias",
+    "itemNome",
+    "itemLink",
     "git",
     "linkPr",
     "linkActions",
@@ -57,6 +59,8 @@ const COLUNAS_CSV_TEXTO = [
     "gmudTitulo",
     "gmudLink",
     "gmudEvidencias",
+    "itemNome",
+    "itemLink",
     "linkPr",
     "linkActions",
 ];

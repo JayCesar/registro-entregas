@@ -332,6 +332,18 @@
             <small class="erro" data-erro="assunto"></small>
           </div>
 
+          <!-- Link do item no portal interno (história, bug, discovery, board...). -->
+          <div class="campo">
+            <label for="itemNome">Nome do link <span class="dica">(ex.: HIST-1234)</span></label>
+            <input type="text" id="itemNome" name="itemNome" placeholder="HIST-1234">
+          </div>
+
+          <div class="campo duplo">
+            <label for="itemLink">Link do item no portal *</label>
+            <input type="url" id="itemLink" name="itemLink" placeholder="https://portal.empresa/...">
+            <small class="erro" data-erro="itemLink"></small>
+          </div>
+
           <div class="campo largo">
             <label for="descricao">Breve descrição do que foi feito *</label>
             <textarea id="descricao" name="descricao" rows="3"></textarea>
@@ -508,6 +520,7 @@
             <tr>
               <th>Tipo</th>
               <th>Assunto</th>
+              <th>Item no portal</th>
               <th>Descrição</th>
               <th>Classificação</th>
               <th>BCP-Score</th>
