@@ -1,12 +1,14 @@
 // ---------- Modelo ----------
 
-// União discriminada: BCP e complexidade só existem quando funcional === true.
+// União discriminada: BCP só existe quando funcional === true. Complexidade vale
+// para toda história (em não funcionais antigas ela não existia: ausente = null).
 type DetalheHistoria =
   | { funcional: true; bcp: string; complexidade: number | null }
-  | { funcional: false };
+  | { funcional: false; complexidade?: number | null };
 
 interface Gmud {
-  nome: string;
+  nome: string; // número/identificador (ex.: GMUD-12345)
+  titulo?: string | null; // nome descritivo; ausente em registros anteriores a este campo
   link: string | null;
 }
 
@@ -17,9 +19,22 @@ interface AlteracaoGit {
 
 interface OkrImpactado {
   okr: Okr;
+  kr?: string | null; // código do KR (ver okrs.ts); null/ausente = o OKR como um todo
   motivo: string;
   grau: GrauImpacto | null; // null só em registros migrados do modelo antigo (um OKR, sem grau)
 }
+
+// Ponto do PDI que a entrega move. `ponto` é o prefixo das chaves do JSON do
+// PDI: "gap_<id>" (evidências e gaps) ou "exp_<id>" (plano de experiências).
+// `versao` é o id da versão do PDI (ver VersaoPdi em pdi.ts); null só em
+// vínculos de antes das versões, que contam como da primeira versão.
+interface VinculoPdi {
+  versao: string | null;
+  ponto: string;
+  intensidade: IntensidadePdi;
+}
+
+const PADRAO_PONTO_PDI = /^(gap|exp)_[a-z0-9]+$/;
 
 interface Registro {
   id: string;
@@ -29,6 +44,10 @@ interface Registro {
   okrs: OkrImpactado[];
   squad: Squad;
   siglas: Sigla[];
+  camadas: Camada[]; // vazio só em registros anteriores a este campo
+  servicosAws: string[];
+  microsservicos: string[];
+  pessoas: string[]; // só na aba de edição: não vai para o dashboard nem para a página publicada
   dataInicio: string; // yyyy-mm-dd
   dataFim: string; // yyyy-mm-dd
   release: Release | null; // null só em registros anteriores a este campo
@@ -37,6 +56,7 @@ interface Registro {
   historia: DetalheHistoria | null; // só para História
   gmud: Gmud | null; // só para História ou Bug
   git: AlteracaoGit | null; // null = sem alteração em repositório
+  pdi: VinculoPdi | null; // null = sem vínculo com o PDI (e em registros anteriores a este campo)
 }
 
 type DadosRegistro = Omit<Registro, "id">;
@@ -54,7 +74,11 @@ const CHAVE_STORAGE = "registro-entregas:v1";
 // motivo e grau não existiam, então ficam vazios até o registro ser editado.
 // Release, sprint e impeditivo também não existiam: entram como "sem release/sprint".
 // historia, gmud e git podem faltar num JSON escrito à mão: viram null.
-type RegistroSalvo = Omit<Registro, "okrs" | "release" | "sprint" | "impeditivo" | "historia" | "gmud" | "git"> & {
+// pdi, camadas, servicosAws e microsservicos não existiam: entram vazios.
+type RegistroSalvo = Omit<
+  Registro,
+  "okrs" | "release" | "sprint" | "impeditivo" | "historia" | "gmud" | "git" | "pdi" | "camadas" | "servicosAws" | "microsservicos" | "pessoas"
+> & {
   okrs?: OkrImpactado[];
   okr?: Okr;
   release?: Release | null;
@@ -63,6 +87,11 @@ type RegistroSalvo = Omit<Registro, "okrs" | "release" | "sprint" | "impeditivo"
   historia?: DetalheHistoria | null;
   gmud?: Gmud | null;
   git?: AlteracaoGit | null;
+  pdi?: VinculoPdi | null;
+  camadas?: Camada[];
+  servicosAws?: string[];
+  microsservicos?: string[];
+  pessoas?: string[];
 };
 
 function migrarRegistro(salvo: RegistroSalvo): Registro {
@@ -76,6 +105,11 @@ function migrarRegistro(salvo: RegistroSalvo): Registro {
     historia: salvo.historia ?? null,
     gmud: salvo.gmud ?? null,
     git: salvo.git ?? null,
+    pdi: salvo.pdi ?? null,
+    camadas: salvo.camadas ?? [],
+    servicosAws: salvo.servicosAws ?? [],
+    microsservicos: salvo.microsservicos ?? [],
+    pessoas: salvo.pessoas ?? [],
   };
 }
 
@@ -93,11 +127,14 @@ function salvarRegistros(lista: Registro[]): void {
   localStorage.setItem(CHAVE_STORAGE, JSON.stringify(lista));
 }
 
-// ---------- Squads e siglas cadastradas ----------
+// ---------- Squads, siglas, serviços AWS e microsserviços cadastrados ----------
 
 // Opções criadas pelo usuário no formulário, além das listas de config.ts.
 const CHAVE_SQUADS = "registro-entregas:squads";
 const CHAVE_SIGLAS = "registro-entregas:siglas";
+const CHAVE_SERVICOS_AWS = "registro-entregas:servicos-aws";
+const CHAVE_MICROSSERVICOS = "registro-entregas:microsservicos";
+const CHAVE_PESSOAS = "registro-entregas:pessoas";
 
 function carregarLista(chave: string): string[] {
   try {
@@ -110,10 +147,19 @@ function carregarLista(chave: string): string[] {
 
 const squadsCadastradas = carregarLista(CHAVE_SQUADS);
 const siglasCadastradas = carregarLista(CHAVE_SIGLAS);
+const servicosAwsCadastrados = carregarLista(CHAVE_SERVICOS_AWS);
+const microsservicosCadastrados = carregarLista(CHAVE_MICROSSERVICOS);
+const pessoasCadastradas = carregarLista(CHAVE_PESSOAS);
 
-// Squads/siglas novas que aparecem num CSV valem como opção enquanto ele é lido
-// (ver registrosDoCsv em csv.ts). Depois da importação passam a vir dos registros.
-const opcoesDoCsvEmLeitura = { squads: new Set<string>(), siglas: new Set<string>() };
+// Opções novas que aparecem num CSV valem enquanto ele é lido (ver
+// registrosDoCsv em csv.ts). Depois da importação passam a vir dos registros.
+const opcoesDoCsvEmLeitura = {
+  squads: new Set<string>(),
+  siglas: new Set<string>(),
+  servicosAws: new Set<string>(),
+  microsservicos: new Set<string>(),
+  pessoas: new Set<string>(),
+};
 
 // config.ts + cadastradas + as que já aparecem em registros (ex.: vindas de um
 // JSON importado), para nenhum registro ficar com valor fora da lista.
@@ -131,6 +177,34 @@ function siglasDisponiveis(): string[] {
       ...registros.flatMap((r) => r.siglas),
       ...opcoesDoCsvEmLeitura.siglas,
     ]),
+  ];
+}
+
+function servicosAwsDisponiveis(): string[] {
+  return [
+    ...new Set([
+      ...SERVICOS_AWS,
+      ...servicosAwsCadastrados,
+      ...registros.flatMap((r) => r.servicosAws),
+      ...opcoesDoCsvEmLeitura.servicosAws,
+    ]),
+  ];
+}
+
+function microsservicosDisponiveis(): string[] {
+  return [
+    ...new Set([
+      ...MICROSSERVICOS,
+      ...microsservicosCadastrados,
+      ...registros.flatMap((r) => r.microsservicos),
+      ...opcoesDoCsvEmLeitura.microsservicos,
+    ]),
+  ];
+}
+
+function pessoasDisponiveis(): string[] {
+  return [
+    ...new Set([...pessoasCadastradas, ...registros.flatMap((r) => r.pessoas), ...opcoesDoCsvEmLeitura.pessoas]),
   ];
 }
 
@@ -163,6 +237,11 @@ function urlValida(valor: string): boolean {
   } catch {
     return false;
   }
+}
+
+// "GMUD-12345 · Ajuste no portal" (ou só o número, se não houver nome).
+function rotuloGmud(gmud: Gmud): string {
+  return gmud.titulo ? `${gmud.nome} · ${gmud.titulo}` : gmud.nome;
 }
 
 function formatarData(iso: string): string {
@@ -216,7 +295,8 @@ function gerarId(): string {
 
 // ---------- Validação ----------
 
-function validar(dados: FormData): Validacao {
+// `exigirCamada` = false no CSV: planilhas de antes da coluna "camadas" continuam válidas.
+function validar(dados: FormData, exigirCamada = true): Validacao {
   const erros: Erros = {};
 
   const tipo = texto(dados, "tipo");
@@ -231,8 +311,10 @@ function validar(dados: FormData): Validacao {
 
   if (!pertence(TIPOS_ITEM, tipo)) erros.tipo = "Selecione o tipo de item.";
 
-  // Cada linha de OKR envia os três campos, então as listas têm o mesmo tamanho e ordem.
+  // Listas alinhadas (mesmo tamanho e ordem), montadas por anexarOkrsDoFormulario
+  // (okrs.ts) ou pelo CSV. okrKr pode faltar (CSV antigo): vale o OKR como um todo.
   const okrsInformados = dados.getAll("okr");
+  const krsInformados = dados.getAll("okrKr");
   const motivos = dados.getAll("okrMotivo");
   const graus = dados.getAll("okrGrau");
   const okrs: OkrImpactado[] = [];
@@ -242,9 +324,14 @@ function validar(dados: FormData): Validacao {
     const valorGrau = graus[indice];
     const motivo = typeof valorMotivo === "string" ? valorMotivo.trim() : "";
     const grau = typeof valorGrau === "string" ? valorGrau : "";
-    const linha = `OKR ${indice + 1}`;
-    if (!pertence(OKRS, okr)) {
-      erros.okrs ??= `${linha}: selecione o OKR.`;
+    const valorKr = krsInformados[indice];
+    const kr = typeof valorKr === "string" ? valorKr.trim() : "";
+    const linha = `OKR ${okr || indice + 1}`;
+    const krsDoOkr = objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [];
+    if (!pertence(okrsDisponiveis(), okr)) {
+      erros.okrs ??= `${linha}: OKR desconhecido (cadastre-o no cartão "OKRs e KRs").`;
+    } else if (kr && !krsDoOkr.includes(kr)) {
+      erros.okrs ??= `${linha}: o KR "${kr}" não existe nesse OKR.`;
     } else if (okrs.some((o) => o.okr === okr)) {
       erros.okrs ??= `${linha}: o OKR ${okr} já foi adicionado nesta entrega.`;
     } else if (!pertence(GRAUS_IMPACTO, grau)) {
@@ -252,10 +339,10 @@ function validar(dados: FormData): Validacao {
     } else if (!motivo) {
       erros.okrs ??= `${linha}: explique o motivo do impacto.`;
     } else {
-      okrs.push({ okr, motivo, grau });
+      okrs.push({ okr, kr: kr || null, motivo, grau });
     }
   }
-  if (okrsInformados.length === 0) erros.okrs = "Adicione ao menos um OKR impactado.";
+  if (okrsInformados.length === 0) erros.okrs = "Escolha ao menos um OKR impactado (abra o OKR e marque o KR).";
 
   if (!pertence(squadsDisponiveis(), squad)) erros.squad = "Selecione a squad.";
   if (!pertence(RELEASES, release)) erros.release = "Selecione a release.";
@@ -278,17 +365,17 @@ function validar(dados: FormData): Validacao {
   let historia: DetalheHistoria | null = null;
   if (tipo === "História") {
     const classificacao = texto(dados, "classificacao");
+    const complexidadeTexto = texto(dados, "complexidade");
+    const complexidade = complexidadeTexto === "" ? null : Number(complexidadeTexto);
+    if (complexidade !== null && (!Number.isFinite(complexidade) || complexidade < 0)) {
+      erros.complexidade = "Informe um número maior ou igual a zero.";
+    }
     if (classificacao === "funcional") {
       const bcp = texto(dados, "bcp");
-      const complexidadeTexto = texto(dados, "complexidade");
-      const complexidade = complexidadeTexto === "" ? null : Number(complexidadeTexto);
       if (!bcp) erros.bcp = "BCP é obrigatório para história funcional.";
-      if (complexidade !== null && (!Number.isFinite(complexidade) || complexidade < 0)) {
-        erros.complexidade = "Informe um número maior ou igual a zero.";
-      }
       historia = { funcional: true, bcp, complexidade };
     } else if (classificacao === "nao-funcional") {
-      historia = { funcional: false };
+      historia = { funcional: false, complexidade };
     } else {
       erros.classificacao = "Informe se a história é funcional ou não funcional.";
     }
@@ -300,7 +387,9 @@ function validar(dados: FormData): Validacao {
     const link = texto(dados, "gmudLink");
     if (link && !nome) erros.gmudNome = "Informe o nome/número da GMUD para usar o link.";
     if (link && !urlValida(link)) erros.gmudLink = "Link inválido (use http:// ou https://).";
-    if (nome) gmud = { nome, link: link || null };
+    const titulo = texto(dados, "gmudTitulo");
+    if (titulo && !nome) erros.gmudNome = "Informe o número da GMUD para usar o nome.";
+    if (nome) gmud = { nome, titulo: titulo || null, link: link || null };
   }
 
   let git: AlteracaoGit | null = null;
@@ -323,9 +412,33 @@ function validar(dados: FormData): Validacao {
     erros.git = "Informe se houve alteração em repositório Git.";
   }
 
+  // Opcional. O CSV não tem essas colunas: lá o vínculo fica null (ver aplicarImportacao).
+  // "versão|ponto": o mesmo ponto pode existir em mais de uma versão do PDI (ver pdi.ts).
+  const [pdiVersao = "", pdiPonto = ""] = texto(dados, "pdiPonto").split("|");
+  const pdiIntensidade = texto(dados, "pdiIntensidade");
+  let pdi: VinculoPdi | null = null;
+  if (pdiPonto) {
+    if (!PADRAO_PONTO_PDI.test(pdiPonto)) erros.pdiPonto = "Ponto do PDI inválido.";
+    else if (!pertence(INTENSIDADES_PDI, pdiIntensidade)) erros.pdiIntensidade = "Escolha a intensidade.";
+    else pdi = { versao: pdiVersao || null, ponto: pdiPonto, intensidade: pdiIntensidade };
+  } else if (pdiIntensidade) {
+    erros.pdiPonto = "Escolha o ponto do PDI (ou deixe a intensidade em branco).";
+  }
+
   const siglas = dados
     .getAll("siglas")
     .filter((s): s is Sigla => typeof s === "string" && pertence(siglasDisponiveis(), s));
+  const camadas = dados.getAll("camadas").filter((c): c is Camada => typeof c === "string" && pertence(CAMADAS, c));
+  if (exigirCamada && camadas.length === 0) erros.camadas = "Marque ao menos uma camada (backend, frontend, database ou infra).";
+  const servicosAws = dados
+    .getAll("servicosAws")
+    .filter((s): s is string => typeof s === "string" && pertence(servicosAwsDisponiveis(), s));
+  const microsservicos = dados
+    .getAll("microsservicos")
+    .filter((m): m is string => typeof m === "string" && pertence(microsservicosDisponiveis(), m));
+  const pessoas = dados
+    .getAll("pessoas")
+    .filter((p): p is string => typeof p === "string" && pertence(pessoasDisponiveis(), p));
 
   // Os pertence() se repetem aqui só para o compilador estreitar string -> tipo da lista.
   if (
@@ -347,6 +460,10 @@ function validar(dados: FormData): Validacao {
       okrs,
       squad,
       siglas,
+      camadas,
+      servicosAws,
+      microsservicos,
+      pessoas,
       dataInicio,
       dataFim,
       release,
@@ -355,6 +472,7 @@ function validar(dados: FormData): Validacao {
       historia,
       gmud,
       git,
+      pdi,
     },
   };
 }
@@ -369,18 +487,22 @@ const corpoTabela = el<HTMLTableSectionElement>("corpo-tabela");
 const contador = el<HTMLSpanElement>("contador");
 
 const campoTipo = el<HTMLSelectElement>("tipo");
-const listaOkrs = el<HTMLDivElement>("lista-okrs");
-const botaoAdicionarOkr = el<HTMLButtonElement>("btn-adicionar-okr");
-const campoSquad = el<HTMLSelectElement>("squad");
+const listaSquads = el<HTMLDivElement>("lista-squads");
 const campoRelease = el<HTMLSelectElement>("release");
 const campoSprint = el<HTMLSelectElement>("sprint");
 const filtroRelease = el<HTMLSelectElement>("filtro-release");
 const filtroSprint = el<HTMLSelectElement>("filtro-sprint");
 const filtroImpeditivo = el<HTMLSelectElement>("filtro-impeditivo");
+const buscaTabela = el<HTMLInputElement>("busca-tabela");
 const botaoExportar = el<HTMLButtonElement>("btn-exportar");
 const campoImportar = el<HTMLInputElement>("importar");
 const campoGmudNome = el<HTMLInputElement>("gmudNome");
 const listaSiglas = el<HTMLDivElement>("lista-siglas");
+const listaCamadas = el<HTMLDivElement>("lista-camadas");
+const listaServicosAws = el<HTMLDivElement>("lista-servicos-aws");
+const listaMicrosservicos = el<HTMLDivElement>("lista-microsservicos");
+const listaPessoas = el<HTMLDivElement>("lista-pessoas");
+const secaoGmudTitulo = el<HTMLElement>("sec-gmud-titulo");
 
 const secaoClassificacao = el<HTMLElement>("sec-classificacao");
 const secaoFuncional = el<HTMLElement>("sec-funcional");
@@ -400,30 +522,101 @@ function preencherSelect(select: HTMLSelectElement, opcoes: readonly string[]): 
   for (const opcao of opcoes) select.append(new Option(opcao, opcao));
 }
 
-function adicionarCaixaSigla(sigla: string, marcada = false): void {
-  const rotulo = document.createElement("label");
-  const caixa = document.createElement("input");
-  caixa.type = "checkbox";
-  caixa.name = "siglas";
-  caixa.value = sigla;
-  caixa.checked = marcada;
-  rotulo.append(caixa, ` ${sigla}`);
-  listaSiglas.append(rotulo);
+// Pílula clicável: o input (radio ou checkbox) fica escondido dentro do
+// <label> e o CSS pinta o <span> quando ele está marcado (ver .escolha em style.css).
+function criarEscolha(tipo: "radio" | "checkbox", nome: string, valor: string, rotulo: string | Node, marcada = false): HTMLLabelElement {
+  const escolha = document.createElement("label");
+  escolha.className = "escolha";
+  const entrada = document.createElement("input");
+  entrada.type = tipo;
+  entrada.name = nome;
+  entrada.value = valor;
+  entrada.checked = marcada;
+  // defaultChecked: o reset() do formulário volta para esta marcação.
+  entrada.defaultChecked = marcada;
+  const texto = document.createElement("span");
+  texto.append(rotulo);
+  escolha.append(entrada, texto);
+  return escolha;
+}
+
+// Pílulas de múltipla escolha que crescem pelo formulário (siglas, serviços AWS, microsserviços).
+interface ListaCadastravel {
+  lista: HTMLElement;
+  nome: string; // name das caixas no FormData
+  chave: string; // localStorage das opções cadastradas
+  cadastradas: string[];
+  disponiveis: () => string[];
+}
+
+const LISTA_SIGLAS: ListaCadastravel = {
+  lista: listaSiglas,
+  nome: "siglas",
+  chave: CHAVE_SIGLAS,
+  cadastradas: siglasCadastradas,
+  disponiveis: siglasDisponiveis,
+};
+const LISTA_SERVICOS_AWS: ListaCadastravel = {
+  lista: listaServicosAws,
+  nome: "servicosAws",
+  chave: CHAVE_SERVICOS_AWS,
+  cadastradas: servicosAwsCadastrados,
+  disponiveis: servicosAwsDisponiveis,
+};
+const LISTA_MICROSSERVICOS: ListaCadastravel = {
+  lista: listaMicrosservicos,
+  nome: "microsservicos",
+  chave: CHAVE_MICROSSERVICOS,
+  cadastradas: microsservicosCadastrados,
+  disponiveis: microsservicosDisponiveis,
+};
+const LISTA_PESSOAS: ListaCadastravel = {
+  lista: listaPessoas,
+  nome: "pessoas",
+  chave: CHAVE_PESSOAS,
+  cadastradas: pessoasCadastradas,
+  disponiveis: pessoasDisponiveis,
+};
+
+function refazerLista({ lista, nome, disponiveis }: ListaCadastravel): void {
+  const marcadas = new Set([...lista.querySelectorAll<HTMLInputElement>("input:checked")].map((caixa) => caixa.value));
+  lista.replaceChildren(...disponiveis().map((opcao) => criarEscolha("checkbox", nome, opcao, opcao, marcadas.has(opcao))));
+  if (disponiveis().length === 0) {
+    lista.append(Object.assign(document.createElement("span"), { className: "dica", textContent: "Nenhum cadastrado ainda." }));
+  }
+}
+
+// Opção já existente (mesmo com outra caixa) só é marcada, sem duplicar. A nova já entra marcada.
+function cadastrarNaLista(alvo: ListaCadastravel, valor: string): void {
+  const existente = encontrarOpcao(alvo.disponiveis(), valor);
+  if (!existente) {
+    alvo.cadastradas.push(valor);
+    localStorage.setItem(alvo.chave, JSON.stringify(alvo.cadastradas));
+    alvo.lista.querySelector("span.dica")?.remove();
+    alvo.lista.append(criarEscolha("checkbox", alvo.nome, valor, valor, true));
+    return;
+  }
+  const caixa = alvo.lista.querySelector<HTMLInputElement>(`input[value="${CSS.escape(existente)}"]`);
+  if (caixa) caixa.checked = true;
+}
+
+function marcarCaixas(lista: HTMLElement, valores: readonly string[]): void {
+  for (const caixa of lista.querySelectorAll<HTMLInputElement>("input")) caixa.checked = valores.includes(caixa.value);
+}
+
+function adicionarSquad(squad: string, marcada = false): void {
+  listaSquads.append(criarEscolha("radio", "squad", squad, squad, marcada));
 }
 
 // Squads e siglas podem ter mudado (cadastro ou importação): refaz as opções
 // mantendo o que estava escolhido.
 function preencherSquadsESiglas(): void {
-  const squadAtual = campoSquad.value;
-  campoSquad.replaceChildren();
-  preencherSelect(campoSquad, squadsDisponiveis());
-  campoSquad.value = squadAtual;
+  const squadAtual = radioMarcado("squad");
+  listaSquads.replaceChildren();
+  for (const squad of squadsDisponiveis()) adicionarSquad(squad);
+  marcarRadio("squad", squadAtual);
 
-  const marcadas = new Set(
-    [...listaSiglas.querySelectorAll<HTMLInputElement>("input:checked")].map((caixa) => caixa.value),
-  );
-  listaSiglas.replaceChildren();
-  for (const sigla of siglasDisponiveis()) adicionarCaixaSigla(sigla, marcadas.has(sigla));
+  for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_PESSOAS]) refazerLista(alvo);
 }
 
 // Squad já existente (mesmo com outra caixa) só é selecionada, sem duplicar.
@@ -433,9 +626,9 @@ function cadastrarSquad(nome: string): string | null {
   if (!existente) {
     squadsCadastradas.push(nome);
     localStorage.setItem(CHAVE_SQUADS, JSON.stringify(squadsCadastradas));
-    campoSquad.append(new Option(nome, nome));
+    adicionarSquad(nome);
   }
-  campoSquad.value = existente ?? nome;
+  marcarRadio("squad", existente ?? nome);
   return null;
 }
 
@@ -444,15 +637,27 @@ function cadastrarSigla(valor: string): string | null {
   const sigla = valor.toUpperCase();
   if (!sigla) return "Informe a sigla.";
   if (/\s/.test(sigla)) return "A sigla não pode ter espaços.";
-  const existente = encontrarOpcao(siglasDisponiveis(), sigla);
-  if (existente) {
-    const caixa = listaSiglas.querySelector<HTMLInputElement>(`input[value="${CSS.escape(existente)}"]`);
-    if (caixa) caixa.checked = true;
-    return null;
-  }
-  siglasCadastradas.push(sigla);
-  localStorage.setItem(CHAVE_SIGLAS, JSON.stringify(siglasCadastradas));
-  adicionarCaixaSigla(sigla, true);
+  cadastrarNaLista(LISTA_SIGLAS, sigla);
+  return null;
+}
+
+function cadastrarServicoAws(valor: string): string | null {
+  if (!valor) return "Informe o serviço AWS.";
+  cadastrarNaLista(LISTA_SERVICOS_AWS, valor);
+  return null;
+}
+
+function cadastrarPessoa(valor: string): string | null {
+  if (!valor) return "Informe o nome da pessoa.";
+  cadastrarNaLista(LISTA_PESSOAS, valor);
+  return null;
+}
+
+// Nome como está no repositório/cluster (ex.: ms-reservas): mantém a caixa digitada.
+function cadastrarMicrosservico(valor: string): string | null {
+  if (!valor) return "Informe o nome do microsserviço.";
+  if (/\s/.test(valor)) return "Use o nome sem espaços (ex.: ms-reservas).";
+  cadastrarNaLista(LISTA_MICROSSERVICOS, valor);
   return null;
 }
 
@@ -514,36 +719,6 @@ function criarCadastroRapido(
   container.append(abrir, linha, erro);
 }
 
-function adicionarLinhaOkr(impacto?: OkrImpactado): void {
-  const linha = document.createElement("div");
-  linha.className = "linha-okr";
-
-  const okr = document.createElement("select");
-  okr.name = "okr";
-  okr.ariaLabel = "OKR impactado";
-  preencherSelect(okr, OKRS);
-
-  const grau = document.createElement("select");
-  grau.name = "okrGrau";
-  grau.ariaLabel = "Grau de impacto";
-  grau.append(new Option("Grau de impacto...", ""));
-  for (const opcao of GRAUS_IMPACTO) grau.append(new Option(opcao, opcao));
-
-  const motivo = document.createElement("input");
-  motivo.type = "text";
-  motivo.name = "okrMotivo";
-  motivo.ariaLabel = "Motivo do impacto";
-  motivo.placeholder = "Motivo do impacto";
-
-  if (impacto) {
-    okr.value = impacto.okr;
-    grau.value = impacto.grau ?? "";
-    motivo.value = impacto.motivo;
-  }
-
-  linha.append(okr, grau, motivo, criarBotao("Remover", "perigo", () => linha.remove()));
-  listaOkrs.append(linha);
-}
 
 function radioMarcado(nome: string): string {
   const radio = formulario.querySelector<HTMLInputElement>(`input[name="${nome}"]:checked`);
@@ -578,6 +753,8 @@ function atualizarCamposCondicionais(): void {
   // A ordem importa: sec-actions fica dentro de sec-git.
   mostrar(secaoGit, houveAlteracaoGit);
   mostrar(secaoActions, houveAlteracaoGit && temGmud);
+  // O nome da GMUD só aparece quando há GMUD informada.
+  mostrar(secaoGmudTitulo, temGmud);
 }
 
 function exibirErros(erros: Erros): void {
@@ -588,8 +765,8 @@ function exibirErros(erros: Erros): void {
 
 function limparFormulario(): void {
   formulario.reset();
-  listaOkrs.replaceChildren();
-  adicionarLinhaOkr();
+  preencherVinculoPdi(null); // pdi.ts: volta para a versão mais recente, sem vínculo
+  preencherOkrsEntrega([]); // okrs.ts: todos os OKRs fechados, sem escolha
   idEmEdicao = null;
   tituloFormulario.textContent = "Novo registro";
   botaoSalvar.textContent = "Adicionar registro";
@@ -614,9 +791,8 @@ function iniciarEdicao(registro: Registro): void {
   idEmEdicao = registro.id;
 
   definirValor("tipo", registro.tipo);
-  listaOkrs.replaceChildren();
-  for (const impacto of registro.okrs) adicionarLinhaOkr(impacto);
-  definirValor("squad", registro.squad);
+  preencherOkrsEntrega(registro.okrs); // okrs.ts
+  marcarRadio("squad", registro.squad);
   definirValor("assunto", registro.assunto);
   definirValor("descricao", registro.descricao);
   definirValor("dataInicio", registro.dataInicio);
@@ -627,22 +803,26 @@ function iniciarEdicao(registro: Registro): void {
 
   if (registro.historia) {
     marcarRadio("classificacao", registro.historia.funcional ? "funcional" : "nao-funcional");
-    if (registro.historia.funcional) {
-      definirValor("bcp", registro.historia.bcp);
-      definirValor("complexidade", registro.historia.complexidade?.toString() ?? "");
-    }
+    definirValor("complexidade", registro.historia.complexidade?.toString() ?? "");
+    if (registro.historia.funcional) definirValor("bcp", registro.historia.bcp);
   }
 
   definirValor("gmudNome", registro.gmud?.nome ?? "");
   definirValor("gmudLink", registro.gmud?.link ?? "");
+  definirValor("gmudTitulo", registro.gmud?.titulo ?? "");
 
   marcarRadio("git", registro.git ? "sim" : "nao");
   definirValor("linkPr", registro.git?.linkPullRequest ?? "");
   definirValor("linkActions", registro.git?.linkActions ?? "");
 
-  for (const caixa of listaSiglas.querySelectorAll<HTMLInputElement>("input")) {
-    caixa.checked = (registro.siglas as string[]).includes(caixa.value);
-  }
+  marcarCaixas(listaSiglas, registro.siglas);
+  marcarCaixas(listaCamadas, registro.camadas);
+  marcarCaixas(listaServicosAws, registro.servicosAws);
+  marcarCaixas(listaMicrosservicos, registro.microsservicos);
+  marcarCaixas(listaPessoas, registro.pessoas);
+
+  // pdi.ts: versão, ponto e intensidade do registro, mesmo que o ponto já tenha saído do PDI.
+  preencherVinculoPdi(registro.pdi);
 
   tituloFormulario.textContent = "Editando registro";
   botaoSalvar.textContent = "Salvar alterações";
@@ -654,7 +834,9 @@ function iniciarEdicao(registro: Registro): void {
 function aoEnviar(evento: SubmitEvent): void {
   evento.preventDefault();
 
-  const resultado = validar(new FormData(formulario));
+  const dados = new FormData(formulario);
+  anexarOkrsDoFormulario(dados); // okrs.ts: um item por OKR escolhido
+  const resultado = validar(dados);
   if (!resultado.ok) {
     exibirErros(resultado.erros);
     formulario.querySelector("[data-erro]:not(:empty)")?.scrollIntoView({ block: "center" });
@@ -717,10 +899,8 @@ function criarLinha(registro: Registro): HTMLTableRowElement {
   let complexidade = VAZIO;
   if (historia) {
     classificacao = historia.funcional ? "Funcional" : "Não funcional";
-    if (historia.funcional) {
-      bcp = historia.bcp;
-      complexidade = historia.complexidade?.toString() ?? VAZIO;
-    }
+    complexidade = historia.complexidade?.toString() ?? VAZIO;
+    if (historia.funcional) bcp = historia.bcp;
   }
 
   const okrs = document.createElement("div");
@@ -728,7 +908,8 @@ function criarLinha(registro: Registro): HTMLTableRowElement {
   for (const impacto of registro.okrs) {
     const item = document.createElement("div");
     const detalhe = [impacto.grau ?? "grau não informado", impacto.motivo].filter(Boolean).join(": ");
-    item.textContent = `${impacto.okr} (${detalhe})`;
+    const kr = impacto.kr ? ` · ${impacto.kr}` : "";
+    item.textContent = `${impacto.okr}${kr} (${detalhe})`;
     okrs.append(item);
   }
   if (registro.okrs.length === 0) okrs.textContent = VAZIO;
@@ -752,10 +933,15 @@ function criarLinha(registro: Registro): HTMLTableRowElement {
     classificacao,
     bcp,
     complexidade,
-    gmud ? (gmud.link ? criarLink(gmud.link, gmud.nome) : gmud.nome) : VAZIO,
+    gmud ? (gmud.link ? criarLink(gmud.link, rotuloGmud(gmud)) : rotuloGmud(gmud)) : VAZIO,
     okrs,
+    textoDoVinculoPdi(registro.pdi), // pdi.ts
     registro.squad,
     registro.siglas.join(", ") || VAZIO,
+    registro.camadas.join(", ") || VAZIO,
+    registro.servicosAws.join(", ") || VAZIO,
+    registro.microsservicos.join(", ") || VAZIO,
+    registro.pessoas.join(", ") || VAZIO,
     formatarData(registro.dataInicio),
     formatarData(registro.dataFim),
     `${leadTimeEmDias(registro)} d`,
@@ -789,29 +975,42 @@ function passaNosFiltros(registro: Registro): boolean {
   return true;
 }
 
+// Linha única ocupando todas as colunas, para tabela vazia ou busca sem resultado.
+function mostrarTabelaVazia(texto: string): void {
+  const linha = document.createElement("tr");
+  const celula = document.createElement("td");
+  celula.colSpan = 25;
+  celula.className = "vazio";
+  celula.textContent = texto;
+  linha.append(celula);
+  corpoTabela.replaceChildren(linha);
+}
+
 function renderizarTabela(): void {
   const total = registros.length;
-  const visiveis = registros.filter(passaNosFiltros);
+  // Entregas mais recentes primeiro. A busca olha o texto de todas as colunas da
+  // linha (inclusive pessoas, GMUD e PDI), sem diferenciar acento nem maiúscula.
+  const palavras = semAcentoNaBusca(buscaTabela.value).split(/\s+/).filter(Boolean);
+  const linhas = registros
+    .filter(passaNosFiltros)
+    .sort((a, b) => b.dataFim.localeCompare(a.dataFim))
+    .map(criarLinha)
+    .filter((linha) => {
+      const conteudo = semAcentoNaBusca(linha.textContent ?? "");
+      return palavras.every((palavra) => conteudo.includes(palavra));
+    });
+
   const totalTexto = total === 1 ? "1 registro" : `${total} registros`;
-  contador.textContent = visiveis.length === total ? totalTexto : `${visiveis.length} de ${totalTexto}`;
+  contador.textContent = linhas.length === total ? totalTexto : `${linhas.length} de ${totalTexto}`;
 
-  if (visiveis.length === 0) {
-    const linha = document.createElement("tr");
-    const celula = document.createElement("td");
-    celula.colSpan = 20;
-    celula.className = "vazio";
-    celula.textContent =
-      total === 0
-        ? "Nenhum registro ainda. Use o formulário acima para adicionar o primeiro."
-        : "Nenhum registro corresponde aos filtros selecionados.";
-    linha.append(celula);
-    corpoTabela.replaceChildren(linha);
-    return;
-  }
+  if (total === 0) mostrarTabelaVazia("Nenhum registro ainda. Use o formulário acima para adicionar o primeiro.");
+  else if (linhas.length === 0 && palavras.length > 0) mostrarTabelaVazia(`Nenhum registro encontrado para "${buscaTabela.value.trim()}".`);
+  else if (linhas.length === 0) mostrarTabelaVazia("Nenhum registro corresponde aos filtros selecionados.");
+  else corpoTabela.replaceChildren(...linhas);
+}
 
-  // Entregas mais recentes primeiro.
-  const ordenados = [...visiveis].sort((a, b) => b.dataFim.localeCompare(a.dataFim));
-  corpoTabela.replaceChildren(...ordenados.map(criarLinha));
+function semAcentoNaBusca(texto: string): string {
+  return texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
 
 // ---------- Exportar / importar JSON ----------
@@ -835,21 +1034,29 @@ function exportarJson(): void {
 // para PCs onde não dá para baixar o repositório.
 const fonteDoArquivoUnico = (window as Window & { fonteDoArquivoUnico?: string }).fonteDoArquivoUnico;
 
-function gerarPaginaPublicada(): void {
+async function gerarPaginaPublicada(): Promise<void> {
   if (!fonteDoArquivoUnico) return;
   if (registros.length === 0) {
     alert("Não há entregas para publicar: importe o CSV primeiro.");
     return;
   }
+  // Os vínculos com o PDI não vão abertos: seguem cifrados, junto com o PDI,
+  // na tag de tagDoPdiPublicado (pdi.ts), que só a senha do coordenador abre.
+  // Pessoas envolvidas também ficam fora: só servem para a aba de edição.
+  const semPdi = registros.map((r) => ({ ...r, pdi: null, pessoas: [] }));
   // Mesmo formato do `npm run publicar --json`: "<" escapado para nenhum texto
   // fechar a tag <script> antes da hora.
-  const json = JSON.stringify(registros).replaceAll("<", "\\u003c");
+  const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
+  const tagPdi = await tagDoPdiPublicado();
+  // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
+  const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
+  const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}</script>\n`;
   const scripts = [...document.querySelectorAll<HTMLScriptElement>("script[data-app]")]
     .map((script) => `<script data-app>${script.textContent ?? ""}</script>`)
     .join("\n");
   const pagina = fonteDoArquivoUnico.replace(
     "</body>",
-    () => `<script type="application/json" id="dados-publicados">${json}</script>\n${scripts}\n</body>`,
+    () => `<script type="application/json" id="dados-publicados">${json}</script>\n${tagOkrs}${tagPdi}${scripts}\n</body>`,
   );
 
   const link = document.createElement("a");
@@ -898,15 +1105,37 @@ function errosDoRegistroJson(r: RegistroSalvo, posicao: number): string[] {
     erros.push(`${onde}: sprint "${r.sprint}" inválida. Use: ${lista(SPRINTS)} (como texto).`);
   }
   if (!r.siglas.every((sigla) => typeof sigla === "string")) erros.push(`${onde}: siglas devem ser textos.`);
+  if (r.camadas !== undefined && (!Array.isArray(r.camadas) || !r.camadas.every((c) => pertence(CAMADAS, c)))) {
+    erros.push(`${onde}: camadas deve ser uma lista com: ${lista(CAMADAS)}.`);
+  }
+  for (const campo of ["servicosAws", "microsservicos", "pessoas"] as const) {
+    const valor = r[campo];
+    if (valor !== undefined && (!Array.isArray(valor) || !valor.every((v) => typeof v === "string"))) {
+      erros.push(`${onde}: ${campo} deve ser uma lista de textos.`);
+    }
+  }
   if (r.okrs !== undefined && !Array.isArray(r.okrs)) erros.push(`${onde}: okrs deve ser uma lista.`);
   for (const impacto of Array.isArray(r.okrs) ? r.okrs : []) {
     if (typeof impacto !== "object" || impacto === null) {
       erros.push(`${onde}: cada item de okrs deve ser { "okr", "grau", "motivo" }.`);
       continue;
     }
-    if (!pertence(OKRS, impacto.okr)) erros.push(`${onde}: OKR "${impacto.okr}" inválido. Use: ${lista(OKRS)}.`);
+    if (!pertence(okrsDisponiveis(), impacto.okr)) {
+      erros.push(`${onde}: OKR "${impacto.okr}" inválido. Use: ${lista(okrsDisponiveis())} (ou cadastre-o).`);
+    }
+    if (impacto.kr != null && typeof impacto.kr !== "string") erros.push(`${onde}: kr deve ser texto ou null.`);
     if (impacto.grau !== null && !pertence(GRAUS_IMPACTO, impacto.grau)) {
       erros.push(`${onde}: grau "${impacto.grau}" inválido. Use: ${lista(GRAUS_IMPACTO)}.`);
+    }
+  }
+  if (r.pdi != null) {
+    const { ponto, intensidade } = r.pdi;
+    if (r.pdi.versao != null && typeof r.pdi.versao !== "string") erros.push(`${onde}: pdi.versao deve ser texto.`);
+    if (typeof ponto !== "string" || !PADRAO_PONTO_PDI.test(ponto)) {
+      erros.push(`${onde}: pdi.ponto deve ser "gap_<id>" ou "exp_<id>".`);
+    }
+    if (!pertence(INTENSIDADES_PDI, intensidade)) {
+      erros.push(`${onde}: pdi.intensidade "${intensidade}" inválida. Use: ${lista(INTENSIDADES_PDI)}.`);
     }
   }
   return erros;
@@ -962,8 +1191,27 @@ function aplicarImportacao(importados: Registro[]): void {
   const mensagem = `Importar ${importados.length} registro(s)? Registros com o mesmo id serão substituídos pelos do arquivo.`;
   if (!confirm(mensagem)) return;
 
+  // O CSV pode não trazer o vínculo com o PDI, camadas, serviços AWS,
+  // microsserviços, pessoas nem o nome da GMUD: reimportar a planilha da semana não pode apagar o que foi
+  // preenchido no formulário. Campo vazio no arquivo mantém o valor atual.
+  const atuais = new Map(registros.map((r) => [r.id, r]));
+  const preservados = importados.map((r) => {
+    const atual = atuais.get(r.id);
+    if (!atual) return r;
+    return {
+      ...r,
+      pdi: r.pdi ?? atual.pdi,
+      camadas: r.camadas.length > 0 ? r.camadas : atual.camadas,
+      servicosAws: r.servicosAws.length > 0 ? r.servicosAws : atual.servicosAws,
+      microsservicos: r.microsservicos.length > 0 ? r.microsservicos : atual.microsservicos,
+      pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
+      // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
+      okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
+      gmud: r.gmud && !r.gmud.titulo && atual.gmud?.nome === r.gmud.nome ? { ...r.gmud, titulo: atual.gmud.titulo ?? null } : r.gmud,
+    };
+  });
   const idsImportados = new Set(importados.map((r) => r.id));
-  registros = [...registros.filter((r) => !idsImportados.has(r.id)), ...importados];
+  registros = [...registros.filter((r) => !idsImportados.has(r.id)), ...preservados];
   salvarRegistros(registros);
   preencherSquadsESiglas();
   limparFormulario();
@@ -985,6 +1233,10 @@ filtroSprint.append(new Option("Sem sprint", "sem"));
 preencherSquadsESiglas();
 criarCadastroRapido(el("nova-squad"), "Nova squad", cadastrarSquad);
 criarCadastroRapido(el("nova-sigla"), "Nova sigla", cadastrarSigla);
+criarCadastroRapido(el("novo-servico-aws"), "Novo serviço AWS", cadastrarServicoAws);
+criarCadastroRapido(el("novo-microsservico"), "Novo microsserviço", cadastrarMicrosservico);
+criarCadastroRapido(el("nova-pessoa"), "Nova pessoa", cadastrarPessoa);
+listaCamadas.append(...CAMADAS.map((camada) => criarEscolha("checkbox", "camadas", camada, camada)));
 
 // A release segue o trimestre da data de fim: escolher a data já preenche a release.
 el<HTMLInputElement>("dataFim").addEventListener("change", (evento) => {
@@ -995,17 +1247,16 @@ el<HTMLInputElement>("dataFim").addEventListener("change", (evento) => {
 formulario.addEventListener("submit", aoEnviar);
 formulario.addEventListener("input", atualizarCamposCondicionais);
 botaoCancelar.addEventListener("click", limparFormulario);
-botaoAdicionarOkr.addEventListener("click", () => adicionarLinhaOkr());
 filtroRelease.addEventListener("change", renderizarTabela);
 filtroSprint.addEventListener("change", renderizarTabela);
 filtroImpeditivo.addEventListener("change", renderizarTabela);
+buscaTabela.addEventListener("input", renderizarTabela);
 botaoExportar.addEventListener("click", exportarJson);
 const botaoGerarPublicada = el<HTMLButtonElement>("btn-gerar-publicada");
 botaoGerarPublicada.hidden = !fonteDoArquivoUnico;
-botaoGerarPublicada.addEventListener("click", gerarPaginaPublicada);
+botaoGerarPublicada.addEventListener("click", () => void gerarPaginaPublicada());
 campoImportar.addEventListener("change", importarJson);
 
-adicionarLinhaOkr();
 
 atualizarCamposCondicionais();
-renderizarTabela();
+// A tabela é desenhada pela primeira vez em pdi.ts: a coluna PDI depende dele.

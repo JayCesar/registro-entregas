@@ -1,7 +1,7 @@
 "use strict";
 // Aba de exibição (gestores): somente leitura. Nada aqui cria, edita ou remove
 // registros; o arquivo só lê a lista `registros` mantida por app.ts.
-// A página é dividida em seções (hero, indicadores, volumetria, impacto e
+// A página é dividida em seções (hero, indicadores, volumetria, impacto, PDI e
 // entregas), navegáveis pelo trilho lateral.
 // `registrosDaSelecao` passa nos filtros do topo (período, release e sprint);
 // `registrosFiltrados` aplica por cima o tipo escolhido nos cartões do hero.
@@ -243,8 +243,8 @@ function renderizarKpis() {
         unidade: mediaLeadTime === 1 ? "dia" : "dias",
     }), criarIndicador("OKRs impactados", okrsAtingidos.toString(), {
         icone: "alvo",
-        complemento: `de ${OKRS.length} acompanhados`,
-        percentual: percentualDe(okrsAtingidos, OKRS.length),
+        complemento: `de ${okrsDisponiveis().length} acompanhados`,
+        percentual: percentualDe(okrsAtingidos, okrsDisponiveis().length),
     }), criarIndicador("Impacto alto", comImpactoAlto.toString(), {
         icone: "medidor",
         complemento: `${dasEntregas}, em ao menos um OKR`,
@@ -464,6 +464,76 @@ function barrasSimples(lista, valores) {
         partes: [{ rotulo: "Entregas", valor: valores.filter((v) => v === rotulo).length, classe: "serie" }],
     }));
 }
+// ---------- Grid de gráficos ----------
+// ---------- Entregas por camada ----------
+// Cor e ícone de cada camada (mesma ordem de CAMADAS em config.ts).
+const ESTILO_CAMADA = {
+    Backend: { cor: "var(--okr-1)", icone: "servidor" },
+    Frontend: { cor: "var(--okr-4)", icone: "monitor" },
+    Database: { cor: "var(--okr-3)", icone: "banco" },
+    Infra: { cor: "var(--okr-2)", icone: "nuvem" },
+};
+// Os mais frequentes de uma lista com repetição ("ECS · SQS · Lambda").
+function maisFrequentes(valores, quantos) {
+    const contagem = new Map();
+    for (const valor of valores)
+        contagem.set(valor, (contagem.get(valor) ?? 0) + 1);
+    return [...contagem]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, quantos)
+        .map(([valor]) => valor);
+}
+function criarCartaoCamada(camada, itens, total) {
+    const { cor, icone } = ESTILO_CAMADA[camada];
+    const cartao = criarElemento("article", itens.length === 0 ? "camada-cartao vazio" : "camada-cartao");
+    cartao.style.setProperty("--cor-camada", cor);
+    const topo = criarElemento("div", "camada-topo");
+    const badge = criarElemento("span", "camada-icone");
+    badge.append(criarIcone(icone));
+    const nome = criarElemento("div");
+    nome.append(criarElemento("strong", "", camada), criarElemento("span", "dica", `${percentualDe(itens.length, total)}% da seleção`));
+    topo.append(badge, nome, criarMedidorAnel(`Entregas em ${camada}`, percentualDe(itens.length, total), cor));
+    const numero = criarElemento("div", "camada-numero");
+    numero.append(criarElemento("strong", "", itens.length.toString()), criarElemento("span", "dica", itens.length === 1 ? "entrega" : "entregas"));
+    cartao.append(topo, numero);
+    if (itens.length === 0)
+        return cartao;
+    // Barra empilhada por tipo de item, nas cores fixas dos tipos.
+    const barra = criarElemento("div", "camada-barra");
+    for (const tipo of ORDEM_CARDS) {
+        const quantidade = itens.filter((r) => r.tipo === tipo).length;
+        if (quantidade === 0)
+            continue;
+        const parte = criarElemento("span");
+        parte.style.flex = `${quantidade} 1 0`;
+        parte.style.background = CORES_TIPO[tipo];
+        parte.title = `${tipo}: ${quantidade}`;
+        barra.append(parte);
+    }
+    cartao.append(barra);
+    const destaques = [
+        ["Serviços AWS", maisFrequentes(itens.flatMap((r) => r.servicosAws), 3)],
+        ["Microsserviços", maisFrequentes(itens.flatMap((r) => r.microsservicos), 3)],
+    ];
+    for (const [rotulo, valores] of destaques) {
+        if (valores.length === 0)
+            continue;
+        const linha = criarElemento("div", "camada-destaque");
+        linha.append(criarElemento("span", "dica", rotulo), ...valores.map((valor) => criarElemento("span", "etiqueta", valor)));
+        cartao.append(linha);
+    }
+    return cartao;
+}
+function criarPainelCamadas() {
+    const cartao = criarElemento("section", "cartao grafico col-12 camadas");
+    const semCamada = registrosFiltrados.filter((r) => r.camadas.length === 0).length;
+    cartao.append(criarElemento("h2", "", "Entregas por camada"), criarElemento("p", "dica", "Em que parte do sistema as entregas mexeram. Uma entrega pode contar em mais de uma camada; a barra mostra os tipos de item." +
+        (semCamada > 0 ? ` ${plural(semCamada, "entrega não tem", "entregas não têm")} camada informada.` : "")));
+    const grade = criarElemento("div", "camadas-grade");
+    grade.append(...CAMADAS.map((camada) => criarCartaoCamada(camada, registrosFiltrados.filter((r) => r.camadas.includes(camada)), registrosFiltrados.length)));
+    cartao.append(grade, criarLegendaTipos());
+    return cartao;
+}
 const GRANULARIDADES = [
     ["mes", "Mensal"],
     ["sprint", "Por sprint"],
@@ -483,17 +553,18 @@ const SERIES_RITMO = [
     { rotulo: "Impacto baixo", cor: "var(--serie-d)", incluir: (r) => maiorGrau(r) === "Baixo" },
 ];
 // Pontos do eixo X na granularidade escolhida, cada um com as entregas dele.
-function pontosDoRitmo() {
-    if (granularidadeRitmo === "mes") {
+// A seção PDI (pdi-dashboard.ts) usa o mesmo agrupamento com as entregas ligadas ao PDI.
+function pontosDoRitmo(lista = registrosFiltrados, granularidade = granularidadeRitmo) {
+    if (granularidade === "mes") {
         const meses = mesesDoGrafico();
         return {
             rotulos: meses.map((mes) => rotuloMes(mes).replace("/20", "/")),
             titulos: meses.map(rotuloMes),
-            grupos: meses.map((mes) => registrosFiltrados.filter((r) => r.dataFim.startsWith(mes))),
+            grupos: meses.map((mes) => lista.filter((r) => r.dataFim.startsWith(mes))),
         };
     }
-    const porSprint = granularidadeRitmo === "sprint";
-    const grupos = agrupar(registrosFiltrados.filter((r) => r.release && (!porSprint || r.sprint)), (r) => (porSprint ? `${chaveRelease(r)}-${r.sprint}` : chaveRelease(r))).map(([, itens]) => itens);
+    const porSprint = granularidade === "sprint";
+    const grupos = agrupar(lista.filter((r) => r.release && (!porSprint || r.sprint)), (r) => (porSprint ? `${chaveRelease(r)}-${r.sprint}` : chaveRelease(r))).map(([, itens]) => itens);
     const primeiro = (itens) => itens[0];
     return {
         rotulos: grupos.map((itens) => {
@@ -575,7 +646,20 @@ function renderizarGraficos() {
         ],
     })), "col-6");
     const porSquad = criarGraficoBarras("Entregas por squad", "Quantidade de entregas de cada squad.", barrasSimples(squadsDisponiveis(), registrosFiltrados.map((r) => r.squad)), "col-6");
-    dashGraficosVolume.replaceChildren(ritmo, porRelease, porMes, porSprint);
+    // Camada e serviços AWS: uma entrega pode contar em mais de um (ex.: backend e database).
+    const porCamada = criarPainelCamadas();
+    const usosAws = registrosFiltrados.flatMap((r) => r.servicosAws);
+    const servicosUsados = [...new Set(usosAws)]
+        .map((servico) => ({ servico, total: usosAws.filter((s) => s === servico).length }))
+        .sort((a, b) => b.total - a.total || a.servico.localeCompare(b.servico))
+        .slice(0, 10);
+    const porServicoAws = criarGraficoBarras("Serviços AWS mais envolvidos", servicosUsados.length > 0
+        ? "Quantas entregas mexeram em cada serviço (os 10 mais frequentes)."
+        : "Nenhuma entrega da seleção tem serviço AWS informado.", servicosUsados.map(({ servico, total }) => ({
+        rotulo: servico,
+        partes: [{ rotulo: "Entregas", valor: total, classe: "serie" }],
+    })), "col-12");
+    dashGraficosVolume.replaceChildren(ritmo, porRelease, porMes, porSprint, porCamada, porServicoAws);
     dashGraficosImpacto.replaceChildren(porGrau, porSquad);
     desenharRitmo(ritmo);
     desenhar(porRelease, agrupar(registrosFiltrados, (r) => chaveRelease(r) || SEM_RELEASE).map(([, itens]) => {
@@ -637,8 +721,6 @@ function criarMedidorIntensidade(media) {
     medidor.append(barras, criarElemento("span", "", texto));
     return medidor;
 }
-// Cor de cada OKR (capa e destaque), em rodízio pela ordem da lista.
-const CORES_OKR = ["var(--okr-1)", "var(--okr-2)", "var(--okr-3)", "var(--okr-4)"];
 // Mesmo desenho dos cartões de entrega: capa ilustrada (aqui, um alvo) e os
 // números abaixo. Clicar abre o detalhe do OKR.
 function criarCartaoOkr(okr, indice, doOkr, total) {
@@ -652,6 +734,7 @@ function criarCartaoOkr(okr, indice, doOkr, total) {
         el("dash-okr-detalhe").scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
     cartao.style.setProperty("--cor-tipo", CORES_OKR[indice % CORES_OKR.length] ?? "var(--destaque)");
+    const titulo = objetivoDe(okr)?.titulo.trim();
     cartao.setAttribute("aria-pressed", String(selecionado));
     cartao.disabled = semEntregas;
     const capa = criarElemento("span", "entrega-capa capa-okr");
@@ -675,7 +758,7 @@ function criarCartaoOkr(okr, indice, doOkr, total) {
         linhas.append(linha);
     }
     const info = criarElemento("span", "okr-info");
-    info.append(criarElemento("strong", "okr-nome", `OKR ${okr}`), numero, barra, linhas, criarMedidorIntensidade(intensidadeMedia(doOkr)), criarElemento("span", "tipo-acao", semEntregas ? "Sem entregas na seleção" : selecionado ? "Em detalhe abaixo ↓" : "Clique para ver as entregas"));
+    info.append(criarElemento("strong", "okr-nome", `OKR ${okr}`), ...(titulo ? [criarElemento("span", "okr-titulo", titulo)] : []), numero, barra, linhas, criarMedidorIntensidade(intensidadeMedia(doOkr)), criarElemento("span", "tipo-acao", semEntregas ? "Sem entregas na seleção" : selecionado ? "Em detalhe abaixo ↓" : "Clique para ver as entregas"));
     cartao.append(capa, info);
     return cartao;
 }
@@ -684,7 +767,21 @@ function criarDetalheOkr(okr, doOkr) {
     painel.id = "dash-okr-detalhe";
     const cabecalho = criarElemento("div", "okr-detalhe-cabecalho");
     const titulo = criarElemento("div");
-    titulo.append(criarElemento("h3", "", `Como as entregas impactam o OKR ${okr}`), criarElemento("p", "dica", "Cada linha é uma entrega: o grau diz o quanto ela move o OKR, o motivo diz por quê. Clique para abrir a entrega."));
+    titulo.append(criarElemento("h3", "", `Como as entregas impactam o ${rotuloOkr(okr)}`), criarElemento("p", "dica", "Cada linha é uma entrega: o grau diz o quanto ela move o OKR, o motivo diz por quê. Clique para abrir a entrega."));
+    // Quantas entregas em cada KR (e no OKR como um todo), na ordem do cadastro.
+    const krs = comExtras(objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [], doOkr.flatMap(({ impacto }) => (impacto.kr ? [impacto.kr] : [])));
+    const porKr = criarElemento("div", "okr-krs");
+    for (const kr of [...krs, ""]) {
+        const quantidade = doOkr.filter(({ impacto }) => (impacto.kr ?? "") === kr).length;
+        if (!kr && quantidade === 0)
+            continue;
+        const item = criarElemento("span", quantidade === 0 ? "etiqueta zerado" : "etiqueta");
+        item.title = rotuloKr(okr, kr || null);
+        item.append(`${kr || "OKR como um todo"} `, criarElemento("strong", "", quantidade.toString()));
+        porKr.append(item);
+    }
+    if (krs.length > 0)
+        titulo.append(porKr);
     const graus = comExtras(GRAUS_DECRESCENTES, doOkr.map(({ impacto }) => grauDe(impacto)));
     const chips = criarElemento("div", "segmentado");
     chips.setAttribute("role", "group");
@@ -715,7 +812,7 @@ function criarDetalheOkr(okr, doOkr) {
         grau.append(criarElemento("span", `grau ${classeDoGrau(impacto.grau)}`, impacto.grau ?? "Sem grau"));
         const corpo = criarElemento("div", "okr-linha-corpo");
         const meta = criarElemento("div", "okr-linha-meta");
-        meta.append(criarElemento("span", "etiqueta etiqueta-tipo", registro.tipo), criarElemento("span", "dica", `${rotuloReleaseSprint(registro)} · ${registro.squad} · ${formatarData(registro.dataFim)}`));
+        meta.append(criarElemento("span", "etiqueta etiqueta-tipo", registro.tipo), ...(impacto.kr ? [criarElemento("span", "etiqueta okr-kr", rotuloKr(okr, impacto.kr))] : []), criarElemento("span", "dica", `${rotuloReleaseSprint(registro)} · ${registro.squad} · ${formatarData(registro.dataFim)}`));
         const motivo = criarElemento("p", "okr-linha-motivo");
         motivo.append(criarElemento("strong", "", "Motivo: "), impacto.motivo || "não informado.");
         corpo.append(meta, criarElemento("strong", "okr-linha-assunto", registro.assunto), motivo);
@@ -749,7 +846,7 @@ function criarDetalheOkr(okr, doOkr) {
 // OKR escolhido: cada entrega com o grau e o motivo do impacto.
 function renderizarOkrs() {
     const impactos = registrosFiltrados.flatMap((registro) => registro.okrs.map((impacto) => ({ registro, impacto })));
-    const okrs = comExtras(OKRS, impactos.map(({ impacto }) => impacto.okr));
+    const okrs = comExtras(okrsDisponiveis(), impactos.map(({ impacto }) => impacto.okr));
     const doOkr = (okr) => impactos.filter(({ impacto }) => impacto.okr === okr);
     // A seleção pode ter ficado sem entregas depois de um filtro: vai para o primeiro com impacto.
     if (doOkr(okrSelecionado).length === 0) {
@@ -777,7 +874,10 @@ function criarSecaoEntrega(titulo, conteudo) {
     return secao;
 }
 function criarChipOkr(impacto) {
-    return criarElemento("span", `grau ${classeDoGrau(impacto.grau)}`, `OKR ${impacto.okr} · ${impacto.grau ?? "s/ grau"}`);
+    const kr = impacto.kr ? ` · ${impacto.kr}` : "";
+    const chip = criarElemento("span", `grau ${classeDoGrau(impacto.grau)}`, `OKR ${impacto.okr}${kr} · ${impacto.grau ?? "s/ grau"}`);
+    chip.title = `${rotuloOkr(impacto.okr)} · ${rotuloKr(impacto.okr, impacto.kr)}`;
+    return chip;
 }
 // Classe da capa de cada tipo: muda a textura de fundo (ver style.css).
 const CLASSE_CAPA = {
@@ -802,7 +902,7 @@ function criarCartaoEntrega(registro) {
     const cartao = criarElemento("article", "entrega");
     cartao.style.setProperty("--cor-tipo", CORES_TIPO[registro.tipo]);
     const chips = criarElemento("div", "entrega-chips");
-    chips.append(criarElemento("span", "etiqueta", rotuloReleaseSprint(registro)), criarElemento("span", "etiqueta", registro.squad), ...registro.okrs.map(criarChipOkr));
+    chips.append(criarElemento("span", "etiqueta", rotuloReleaseSprint(registro)), criarElemento("span", "etiqueta", registro.squad), ...registro.okrs.map(criarChipOkr), ...registro.camadas.map((camada) => criarElemento("span", "etiqueta etiqueta-camada", camada)), ...registro.servicosAws.map((servico) => criarElemento("span", "etiqueta etiqueta-aws", servico)));
     const rodape = criarElemento("div", "entrega-rodape");
     rodape.append(criarElemento("span", "dica", `Lead time: ${plural(leadTimeEmDias(registro), "dia", "dias")}`), criarBotao("Ver detalhes", "link", () => abrirDetalhesEntrega(registro)));
     const info = criarElemento("div", "entrega-info");
@@ -839,7 +939,7 @@ function abrirDetalhesEntrega(registro) {
         for (const impacto of registro.okrs) {
             const item = criarElemento("li");
             const tituloOkr = criarElemento("div", "entrega-okr-titulo");
-            tituloOkr.append(criarElemento("strong", "", `OKR ${impacto.okr}`), criarElemento("span", `grau ${classeDoGrau(impacto.grau)}`, impacto.grau ? `Impacto ${impacto.grau.toLowerCase()}` : "Grau não informado"));
+            tituloOkr.append(criarElemento("strong", "", rotuloOkr(impacto.okr)), ...(impacto.kr ? [criarElemento("span", "etiqueta", rotuloKr(impacto.okr, impacto.kr))] : []), criarElemento("span", `grau ${classeDoGrau(impacto.grau)}`, impacto.grau ? `Impacto ${impacto.grau.toLowerCase()}` : "Grau não informado"));
             const motivo = criarElemento("p");
             motivo.append(criarElemento("strong", "", "Motivo: "), impacto.motivo || "não informado.");
             item.append(tituloOkr, motivo);
@@ -854,15 +954,20 @@ function abrirDetalhesEntrega(registro) {
     const detalhes = criarElemento("dl", "detalhes");
     if (registro.siglas.length > 0)
         adicionarDetalhe(detalhes, "Siglas", registro.siglas.join(", "));
+    if (registro.camadas.length > 0)
+        adicionarDetalhe(detalhes, "Camadas", registro.camadas.join(", "));
+    if (registro.servicosAws.length > 0)
+        adicionarDetalhe(detalhes, "Serviços AWS", registro.servicosAws.join(", "));
+    if (registro.microsservicos.length > 0)
+        adicionarDetalhe(detalhes, "Microsserviços", registro.microsservicos.join(", "));
     if (historia) {
         adicionarDetalhe(detalhes, "Classificação", historia.funcional ? "Funcional" : "Não funcional");
-        if (historia.funcional) {
+        if (historia.funcional)
             adicionarDetalhe(detalhes, "BCP", historia.bcp);
-            adicionarDetalhe(detalhes, "Complexidade", historia.complexidade?.toString() ?? VAZIO);
-        }
+        adicionarDetalhe(detalhes, "Complexidade", historia.complexidade?.toString() ?? VAZIO);
     }
     if (gmud)
-        adicionarDetalhe(detalhes, "GMUD", gmud.nome);
+        adicionarDetalhe(detalhes, "GMUD", rotuloGmud(gmud));
     adicionarDetalhe(detalhes, "Alteração em Git", git ? "Sim" : "Não");
     corpo.append(criarSecaoEntrega("Ficha", detalhes));
     const links = criarElemento("div", "entrega-links");
@@ -903,11 +1008,15 @@ function textoPesquisavel(registro) {
         registro.descricao,
         registro.squad,
         ...registro.siglas,
+        ...registro.camadas,
+        ...registro.servicosAws,
+        ...registro.microsservicos,
         historia?.funcional ? historia.bcp : "",
         gmud?.nome ?? "",
+        gmud?.titulo ?? "",
         registro.impeditivo,
         rotuloReleaseSprint(registro),
-        ...registro.okrs.map((o) => `OKR ${o.okr} ${o.motivo}`),
+        ...registro.okrs.map((o) => `OKR ${o.okr} ${o.kr ?? ""} ${o.motivo}`),
     ].join(" "));
 }
 // Cada palavra digitada precisa aparecer em algum campo (em qualquer ordem).
@@ -1001,6 +1110,7 @@ function renderizarDashboard() {
     renderizarNumerosVolume();
     renderizarGraficos();
     renderizarOkrs();
+    renderizarPdi(); // pdi-dashboard.ts
     renderizarTiposDaBusca();
     renderizarEntregas();
 }

@@ -248,6 +248,7 @@ legend {
 }
 
 input[type="text"],
+input[type="search"],
 input[type="url"],
 input[type="number"],
 input[type="date"],
@@ -286,13 +287,6 @@ button:focus-visible {
   font-weight: 400;
   font-size: 0.95rem;
   cursor: pointer;
-}
-
-.linha-okr {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) auto;
-  gap: 8px;
-  margin: 4px 0 8px;
 }
 
 .dica {
@@ -806,11 +800,6 @@ label.botao:hover {
 }
 
 @media (max-width: 760px) {
-  .linha-okr {
-    grid-template-columns: 1fr;
-  }
-
-
   .grade {
     grid-template-columns: 1fr;
   }
@@ -3011,6 +3000,908 @@ button.modal-fechar {
 
   .modal-corpo {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Pílulas de escolha (squad, siglas, camadas, AWS, PDI) ---------- */
+
+/* O radio/checkbox fica invisível dentro do <label>; o <span> é a pílula. Ver criarEscolha (app.ts). */
+.escolhas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.escolha {
+  position: relative;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.escolha input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.escolha > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.escolha:hover > span {
+  color: var(--texto);
+  border-color: var(--texto-suave);
+}
+
+.escolha input:checked + span {
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-color: var(--destaque);
+}
+
+/* Checkbox marcado ganha um ✓ antes do nome: múltipla escolha fica evidente. */
+.escolha input[type="checkbox"]:checked + span::before {
+  content: "✓";
+}
+
+.escolha input:focus-visible + span {
+  outline: 2px solid var(--destaque);
+  outline-offset: 2px;
+}
+
+.escolha input:disabled + span {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Vínculo da entrega com o PDI ---------- */
+
+.vinculo-pdi {
+  display: grid;
+  gap: 12px;
+}
+
+.vinculo-pdi-escolha {
+  display: grid;
+  gap: 10px;
+}
+
+.vinculo-pdi-intensidade {
+  display: grid;
+  gap: 4px;
+}
+
+/* Dentro do bloco da versão, logo abaixo dos cartões de ponto. */
+.pdi-versao-bloco .vinculo-pdi-intensidade {
+  margin: 14px 12px 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--borda);
+}
+
+/* Um bloco recolhível por versão do PDI. */
+.pdi-versao-bloco {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+}
+
+.pdi-versao-bloco[open] {
+  padding-bottom: 12px;
+}
+
+.pdi-versao-bloco > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 12px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.pdi-versao-bloco > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Seta que gira ao abrir. */
+.pdi-versao-bloco > summary::before {
+  content: "›";
+  display: inline-block;
+  width: 1em;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--texto-suave);
+  transition: transform 0.15s;
+}
+
+.pdi-versao-bloco[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.pdi-versao-escolhido {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--destaque);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pdi-versao-bloco .pontos-escolha {
+  padding: 0 12px;
+}
+
+.pontos-escolha {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 10px;
+}
+
+/* Cartão de ponto: faixa na cor da categoria (--cor-ponto, no <label>) na altura
+   toda, ícone, etiqueta e o texto do ponto. Marcado: contorno na cor e um ✓. */
+.ponto-escolha {
+  display: grid;
+}
+
+.ponto-escolha > span {
+  position: relative;
+  display: block;
+  padding: 0;
+  font-weight: 400;
+  color: var(--texto);
+  text-align: left;
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-left: 5px solid var(--cor-ponto);
+  border-radius: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.ponto-escolha:hover > span {
+  border-color: var(--cor-ponto);
+  transform: translateY(-1px);
+}
+
+.ponto-escolha-conteudo {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 12px 34px 12px 14px;
+}
+
+.ponto-escolha-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cor-ponto);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ponto-escolha-icone {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  background: color-mix(in srgb, var(--cor-ponto) 16%, transparent);
+  border-radius: 7px;
+}
+
+.ponto-escolha-icone .icone {
+  width: 15px;
+  height: 15px;
+}
+
+.ponto-escolha-titulo {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.ponto-escolha-nenhum .ponto-escolha-titulo {
+  color: var(--texto-suave);
+}
+
+.ponto-escolha input:checked + span {
+  color: var(--texto);
+  background: color-mix(in srgb, var(--cor-ponto) 12%, var(--campo));
+  border-color: var(--cor-ponto);
+  box-shadow: 0 0 0 1px var(--cor-ponto);
+}
+
+.ponto-escolha input:checked + span::after {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--cartao);
+  background: var(--cor-ponto);
+  border-radius: 50%;
+}
+
+.ponto-escolha input:checked + span::before {
+  content: none;
+}
+
+/* Intensidade: três pílulas largas com o nome e o que significa. */
+.intensidade-escolha {
+  display: grid;
+  justify-items: start;
+}
+
+.escolha > span.intensidade-escolha {
+  display: grid;
+  gap: 0;
+  min-width: 150px;
+  padding: 8px 16px;
+  border-radius: 14px;
+}
+
+.intensidade-escolha small {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.escolha input:checked + .intensidade-baixo {
+  color: var(--sobre-grau-baixo);
+  background: var(--grau-baixo);
+  border-color: var(--grau-baixo);
+}
+
+.escolha input:checked + .intensidade-medio {
+  color: var(--sobre-grau-medio);
+  background: var(--grau-medio);
+  border-color: var(--grau-medio);
+}
+
+.escolha input:checked + .intensidade-forte {
+  color: var(--sobre-grau-alto);
+  background: var(--grau-alto);
+  border-color: var(--grau-alto);
+}
+
+/* ---------- Camadas e serviços AWS (dashboard) ---------- */
+
+/* Um cartão por camada, tingido pela cor dela (--cor-camada, de ESTILO_CAMADA). */
+.camadas-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+}
+
+.camada-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cor-camada) 16%, transparent), transparent 60%),
+    var(--fundo);
+  border: 1px solid var(--borda);
+  border-top: 3px solid var(--cor-camada);
+  border-radius: var(--raio);
+}
+
+.camada-cartao.vazio {
+  opacity: 0.6;
+}
+
+.camada-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.camada-topo > div {
+  display: grid;
+  flex: 1;
+}
+
+.camada-topo .medidor-anel {
+  width: 48px;
+  height: 48px;
+}
+
+.camada-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  color: var(--cor-camada);
+  background: color-mix(in srgb, var(--cor-camada) 18%, var(--campo));
+  border-radius: 11px;
+}
+
+.camada-icone .icone {
+  width: 20px;
+  height: 20px;
+}
+
+.camada-numero {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.camada-numero strong {
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.camada-barra {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  overflow: hidden;
+  background: var(--grade);
+  border-radius: 999px;
+}
+
+.camada-destaque {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.camada-destaque .dica {
+  width: 100%;
+  font-size: 0.78rem;
+}
+
+.etiqueta-camada {
+  border-style: dashed;
+}
+
+.etiqueta-aws {
+  color: var(--tipo-discovery);
+  border-color: color-mix(in srgb, var(--tipo-discovery) 45%, transparent);
+}
+
+/* ---------- Busca da tabela de registros ---------- */
+
+/* Mesma barra da busca do dashboard, numa linha só, logo abaixo do título. */
+.busca-campo.busca-tabela {
+  margin-bottom: 14px;
+  background: var(--campo);
+}
+
+/* ---------- OKRs: seletor da entrega e cadastro ---------- */
+
+/* Letra do OKR num círculo na cor dele (--cor-ponto, de corDoOkr em okrs.ts). */
+.okr-letra {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--cartao);
+  background: var(--cor-ponto);
+  border-radius: 50%;
+}
+
+.okr-bloco {
+  border-left: 4px solid var(--cor-ponto);
+}
+
+.okr-bloco.com-escolha {
+  border-color: var(--cor-ponto);
+  box-shadow: 0 0 0 1px var(--cor-ponto);
+}
+
+.okr-bloco .okr-detalhe-escolha {
+  display: grid;
+  gap: 8px;
+}
+
+.okr-titulo {
+  font-size: 0.9rem;
+  color: var(--texto-suave);
+}
+
+.okr-krs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.okr-krs .zerado {
+  opacity: 0.5;
+}
+
+.okr-kr {
+  color: var(--cor-tipo);
+}
+
+/* Cadastro: um cartão por OKR, com a cor dele na borda e os KRs em linhas. */
+.okrs-cadastro {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+  gap: 14px;
+  margin: 14px 0;
+}
+
+.okr-cadastro {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--borda);
+  border-top: 4px solid var(--cor-okr);
+  border-radius: var(--raio);
+}
+
+.okr-cadastro > button {
+  justify-self: start;
+}
+
+.okr-cadastro-topo,
+.kr-linha {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.kr-linhas {
+  display: grid;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 2px dashed var(--borda);
+}
+
+.okr-cadastro .campo > span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+/* ---------- PDI: versões em cartões ---------- */
+
+.pdi-versoes-painel {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding: 16px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.pdi-versoes-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pdi-versoes-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+  gap: 10px;
+}
+
+button.pdi-versao-cartao {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--texto);
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+button.pdi-versao-cartao:hover {
+  background: var(--campo);
+  border-color: var(--destaque);
+  transform: translateY(-2px);
+}
+
+button.pdi-versao-cartao[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--destaque) 12%, var(--campo));
+  border-color: var(--destaque);
+  box-shadow: 0 0 0 1px var(--destaque);
+}
+
+.pdi-versao-cartao-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pdi-versao-cartao-topo strong {
+  font-size: 1.15rem;
+}
+
+.pdi-versao-cartao-data {
+  font-weight: 600;
+}
+
+.pdi-versao-cartao-estado {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--destaque);
+}
+
+button.pdi-versao-cartao:not([aria-pressed="true"]) .pdi-versao-cartao-estado {
+  color: var(--texto-suave);
+}
+
+#pdi-versao-aberta {
+  margin: 0;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .okr-cadastro-topo,
+  .kr-linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- PDI: cadastro (aba de edição) ---------- */
+
+.form-pdi,
+#pdi-campos {
+  display: grid;
+  gap: 16px;
+}
+
+.pdi-secao {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.pdi-secao > button {
+  justify-self: start;
+}
+
+.pdi-linhas {
+  display: grid;
+  gap: 8px;
+}
+
+/* Uma linha por gap/experiência: quatro colunas + Remover, como a tabela do PDF. */
+.pdi-linha {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.pdi-linha-cabecalho {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+/* ---------- PDI: seção restrita do dashboard ---------- */
+
+.pdi-bloqueio {
+  display: grid;
+  gap: 12px;
+  max-width: 420px;
+}
+
+.pdi-bloqueio-aviso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pdi-bloqueio-aviso .icone {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  color: var(--destaque);
+  background: var(--campo);
+  border-radius: 12px;
+}
+
+.pdi-bloqueio-aviso .dica {
+  margin: 0;
+}
+
+.pdi-cabecalho-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdi-kpis {
+  margin: 16px 0 20px;
+}
+
+.col-8 {
+  grid-column: span 8;
+}
+
+/* Ranking: nome do ponto, barra empilhada por intensidade e a pontuação. */
+.pdi-ranking-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--borda);
+}
+
+.pdi-ranking-linha:last-child {
+  border-bottom: 0;
+}
+
+.pdi-ranking-nome {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pdi-ranking-texto {
+  overflow: hidden;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pdi-ranking-trilho {
+  height: 14px;
+  background: var(--grade);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pdi-ranking-trilho .okr-barra {
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  border-radius: 999px;
+}
+
+.pdi-ranking-valor {
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdi-ranking-valor strong {
+  font-size: 1.05rem;
+  color: var(--texto);
+}
+
+.pdi-rosca {
+  width: min(220px, 100%);
+  margin: 0 auto;
+}
+
+.pdi-rosca .grafico-rosca {
+  width: 100%;
+  height: auto;
+}
+
+/* Cartões dos pontos: tingidos pela cor da categoria (--cor-ponto, de estiloDoPonto). */
+.pdi-pontos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pdi-ponto {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  background:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cor-ponto) 16%, transparent), transparent 55%),
+    linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-top: 3px solid var(--cor-ponto);
+  border-radius: var(--raio);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.pdi-ponto:hover {
+  border-color: var(--cor-ponto);
+  transform: translateY(-2px);
+}
+
+.pdi-ponto.sem-entregas {
+  background: linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border-style: dashed;
+  border-top-style: solid;
+}
+
+.pdi-ponto-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdi-ponto-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--cor-ponto);
+  background: color-mix(in srgb, var(--cor-ponto) 16%, var(--campo));
+  border-radius: 10px;
+}
+
+.pdi-ponto-icone .icone {
+  width: 18px;
+  height: 18px;
+}
+
+.pdi-ponto-topo .etiqueta {
+  color: var(--cor-ponto);
+  border-color: color-mix(in srgb, var(--cor-ponto) 40%, transparent);
+}
+
+.pdi-ponto-anel {
+  margin-left: auto;
+}
+
+.pdi-ponto-anel .medidor-anel {
+  width: 52px;
+  height: 52px;
+}
+
+.pdi-ponto-titulo {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.pdi-ponto-detalhe {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.pdi-ponto-vazio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: auto 0 0;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  color: var(--texto-suave);
+  background: var(--fundo);
+  border-radius: 12px;
+}
+
+.pdi-ponto-vazio .icone {
+  width: 18px;
+  height: 18px;
+}
+
+.pdi-ponto-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.pdi-ponto-numeros strong {
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pdi-ponto-numeros .dica {
+  margin-right: 10px;
+}
+
+.pdi-ponto-numeros .grau {
+  margin-left: auto;
+  align-self: center;
+}
+
+.pdi-intensidades {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+}
+
+.pdi-intensidades > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdi-intensidades .zerado {
+  opacity: 0.5;
+}
+
+.pdi-intensidades .legenda-cor {
+  width: 10px;
+  height: 10px;
+}
+
+button.pdi-entrega {
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  padding: 10px 12px;
+}
+
+.pdi-ponto-mais {
+  align-self: flex-start;
+}
+
+@media (max-width: 1100px) {
+  .col-8 {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .pdi-linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pdi-linha-cabecalho {
+    display: none;
+  }
+
+  .pdi-ranking-linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pdi-ranking-trilho {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 

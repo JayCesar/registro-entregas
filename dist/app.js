@@ -1,5 +1,6 @@
 "use strict";
 // ---------- Modelo ----------
+const PADRAO_PONTO_PDI = /^(gap|exp)_[a-z0-9]+$/;
 // ---------- Persistência ----------
 const CHAVE_STORAGE = "registro-entregas:v1";
 function migrarRegistro(salvo) {
@@ -13,6 +14,11 @@ function migrarRegistro(salvo) {
         historia: salvo.historia ?? null,
         gmud: salvo.gmud ?? null,
         git: salvo.git ?? null,
+        pdi: salvo.pdi ?? null,
+        camadas: salvo.camadas ?? [],
+        servicosAws: salvo.servicosAws ?? [],
+        microsservicos: salvo.microsservicos ?? [],
+        pessoas: salvo.pessoas ?? [],
     };
 }
 function carregarRegistros() {
@@ -28,10 +34,13 @@ function carregarRegistros() {
 function salvarRegistros(lista) {
     localStorage.setItem(CHAVE_STORAGE, JSON.stringify(lista));
 }
-// ---------- Squads e siglas cadastradas ----------
+// ---------- Squads, siglas, serviços AWS e microsserviços cadastrados ----------
 // Opções criadas pelo usuário no formulário, além das listas de config.ts.
 const CHAVE_SQUADS = "registro-entregas:squads";
 const CHAVE_SIGLAS = "registro-entregas:siglas";
+const CHAVE_SERVICOS_AWS = "registro-entregas:servicos-aws";
+const CHAVE_MICROSSERVICOS = "registro-entregas:microsservicos";
+const CHAVE_PESSOAS = "registro-entregas:pessoas";
 function carregarLista(chave) {
     try {
         const dados = JSON.parse(localStorage.getItem(chave) ?? "[]");
@@ -43,9 +52,18 @@ function carregarLista(chave) {
 }
 const squadsCadastradas = carregarLista(CHAVE_SQUADS);
 const siglasCadastradas = carregarLista(CHAVE_SIGLAS);
-// Squads/siglas novas que aparecem num CSV valem como opção enquanto ele é lido
-// (ver registrosDoCsv em csv.ts). Depois da importação passam a vir dos registros.
-const opcoesDoCsvEmLeitura = { squads: new Set(), siglas: new Set() };
+const servicosAwsCadastrados = carregarLista(CHAVE_SERVICOS_AWS);
+const microsservicosCadastrados = carregarLista(CHAVE_MICROSSERVICOS);
+const pessoasCadastradas = carregarLista(CHAVE_PESSOAS);
+// Opções novas que aparecem num CSV valem enquanto ele é lido (ver
+// registrosDoCsv em csv.ts). Depois da importação passam a vir dos registros.
+const opcoesDoCsvEmLeitura = {
+    squads: new Set(),
+    siglas: new Set(),
+    servicosAws: new Set(),
+    microsservicos: new Set(),
+    pessoas: new Set(),
+};
 // config.ts + cadastradas + as que já aparecem em registros (ex.: vindas de um
 // JSON importado), para nenhum registro ficar com valor fora da lista.
 function squadsDisponiveis() {
@@ -61,6 +79,31 @@ function siglasDisponiveis() {
             ...registros.flatMap((r) => r.siglas),
             ...opcoesDoCsvEmLeitura.siglas,
         ]),
+    ];
+}
+function servicosAwsDisponiveis() {
+    return [
+        ...new Set([
+            ...SERVICOS_AWS,
+            ...servicosAwsCadastrados,
+            ...registros.flatMap((r) => r.servicosAws),
+            ...opcoesDoCsvEmLeitura.servicosAws,
+        ]),
+    ];
+}
+function microsservicosDisponiveis() {
+    return [
+        ...new Set([
+            ...MICROSSERVICOS,
+            ...microsservicosCadastrados,
+            ...registros.flatMap((r) => r.microsservicos),
+            ...opcoesDoCsvEmLeitura.microsservicos,
+        ]),
+    ];
+}
+function pessoasDisponiveis() {
+    return [
+        ...new Set([...pessoasCadastradas, ...registros.flatMap((r) => r.pessoas), ...opcoesDoCsvEmLeitura.pessoas]),
     ];
 }
 // Compara sem diferenciar maiúsculas: "squad alfa" encontra "Squad Alfa".
@@ -89,6 +132,10 @@ function urlValida(valor) {
     catch {
         return false;
     }
+}
+// "GMUD-12345 · Ajuste no portal" (ou só o número, se não houver nome).
+function rotuloGmud(gmud) {
+    return gmud.titulo ? `${gmud.nome} · ${gmud.titulo}` : gmud.nome;
 }
 function formatarData(iso) {
     const [ano, mes, dia] = iso.split("-");
@@ -133,7 +180,8 @@ function gerarId() {
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 // ---------- Validação ----------
-function validar(dados) {
+// `exigirCamada` = false no CSV: planilhas de antes da coluna "camadas" continuam válidas.
+function validar(dados, exigirCamada = true) {
     const erros = {};
     const tipo = texto(dados, "tipo");
     const squad = texto(dados, "squad");
@@ -146,8 +194,10 @@ function validar(dados) {
     const impeditivo = texto(dados, "impeditivo");
     if (!pertence(TIPOS_ITEM, tipo))
         erros.tipo = "Selecione o tipo de item.";
-    // Cada linha de OKR envia os três campos, então as listas têm o mesmo tamanho e ordem.
+    // Listas alinhadas (mesmo tamanho e ordem), montadas por anexarOkrsDoFormulario
+    // (okrs.ts) ou pelo CSV. okrKr pode faltar (CSV antigo): vale o OKR como um todo.
     const okrsInformados = dados.getAll("okr");
+    const krsInformados = dados.getAll("okrKr");
     const motivos = dados.getAll("okrMotivo");
     const graus = dados.getAll("okrGrau");
     const okrs = [];
@@ -157,9 +207,15 @@ function validar(dados) {
         const valorGrau = graus[indice];
         const motivo = typeof valorMotivo === "string" ? valorMotivo.trim() : "";
         const grau = typeof valorGrau === "string" ? valorGrau : "";
-        const linha = `OKR ${indice + 1}`;
-        if (!pertence(OKRS, okr)) {
-            erros.okrs ??= `${linha}: selecione o OKR.`;
+        const valorKr = krsInformados[indice];
+        const kr = typeof valorKr === "string" ? valorKr.trim() : "";
+        const linha = `OKR ${okr || indice + 1}`;
+        const krsDoOkr = objetivoDe(okr)?.krs.map((k) => k.codigo) ?? [];
+        if (!pertence(okrsDisponiveis(), okr)) {
+            erros.okrs ??= `${linha}: OKR desconhecido (cadastre-o no cartão "OKRs e KRs").`;
+        }
+        else if (kr && !krsDoOkr.includes(kr)) {
+            erros.okrs ??= `${linha}: o KR "${kr}" não existe nesse OKR.`;
         }
         else if (okrs.some((o) => o.okr === okr)) {
             erros.okrs ??= `${linha}: o OKR ${okr} já foi adicionado nesta entrega.`;
@@ -171,11 +227,11 @@ function validar(dados) {
             erros.okrs ??= `${linha}: explique o motivo do impacto.`;
         }
         else {
-            okrs.push({ okr, motivo, grau });
+            okrs.push({ okr, kr: kr || null, motivo, grau });
         }
     }
     if (okrsInformados.length === 0)
-        erros.okrs = "Adicione ao menos um OKR impactado.";
+        erros.okrs = "Escolha ao menos um OKR impactado (abra o OKR e marque o KR).";
     if (!pertence(squadsDisponiveis(), squad))
         erros.squad = "Selecione a squad.";
     if (!pertence(RELEASES, release))
@@ -206,19 +262,19 @@ function validar(dados) {
     let historia = null;
     if (tipo === "História") {
         const classificacao = texto(dados, "classificacao");
+        const complexidadeTexto = texto(dados, "complexidade");
+        const complexidade = complexidadeTexto === "" ? null : Number(complexidadeTexto);
+        if (complexidade !== null && (!Number.isFinite(complexidade) || complexidade < 0)) {
+            erros.complexidade = "Informe um número maior ou igual a zero.";
+        }
         if (classificacao === "funcional") {
             const bcp = texto(dados, "bcp");
-            const complexidadeTexto = texto(dados, "complexidade");
-            const complexidade = complexidadeTexto === "" ? null : Number(complexidadeTexto);
             if (!bcp)
                 erros.bcp = "BCP é obrigatório para história funcional.";
-            if (complexidade !== null && (!Number.isFinite(complexidade) || complexidade < 0)) {
-                erros.complexidade = "Informe um número maior ou igual a zero.";
-            }
             historia = { funcional: true, bcp, complexidade };
         }
         else if (classificacao === "nao-funcional") {
-            historia = { funcional: false };
+            historia = { funcional: false, complexidade };
         }
         else {
             erros.classificacao = "Informe se a história é funcional ou não funcional.";
@@ -232,8 +288,11 @@ function validar(dados) {
             erros.gmudNome = "Informe o nome/número da GMUD para usar o link.";
         if (link && !urlValida(link))
             erros.gmudLink = "Link inválido (use http:// ou https://).";
+        const titulo = texto(dados, "gmudTitulo");
+        if (titulo && !nome)
+            erros.gmudNome = "Informe o número da GMUD para usar o nome.";
         if (nome)
-            gmud = { nome, link: link || null };
+            gmud = { nome, titulo: titulo || null, link: link || null };
     }
     let git = null;
     const houveAlteracaoGit = texto(dados, "git");
@@ -255,9 +314,37 @@ function validar(dados) {
     else if (houveAlteracaoGit !== "nao") {
         erros.git = "Informe se houve alteração em repositório Git.";
     }
+    // Opcional. O CSV não tem essas colunas: lá o vínculo fica null (ver aplicarImportacao).
+    // "versão|ponto": o mesmo ponto pode existir em mais de uma versão do PDI (ver pdi.ts).
+    const [pdiVersao = "", pdiPonto = ""] = texto(dados, "pdiPonto").split("|");
+    const pdiIntensidade = texto(dados, "pdiIntensidade");
+    let pdi = null;
+    if (pdiPonto) {
+        if (!PADRAO_PONTO_PDI.test(pdiPonto))
+            erros.pdiPonto = "Ponto do PDI inválido.";
+        else if (!pertence(INTENSIDADES_PDI, pdiIntensidade))
+            erros.pdiIntensidade = "Escolha a intensidade.";
+        else
+            pdi = { versao: pdiVersao || null, ponto: pdiPonto, intensidade: pdiIntensidade };
+    }
+    else if (pdiIntensidade) {
+        erros.pdiPonto = "Escolha o ponto do PDI (ou deixe a intensidade em branco).";
+    }
     const siglas = dados
         .getAll("siglas")
         .filter((s) => typeof s === "string" && pertence(siglasDisponiveis(), s));
+    const camadas = dados.getAll("camadas").filter((c) => typeof c === "string" && pertence(CAMADAS, c));
+    if (exigirCamada && camadas.length === 0)
+        erros.camadas = "Marque ao menos uma camada (backend, frontend, database ou infra).";
+    const servicosAws = dados
+        .getAll("servicosAws")
+        .filter((s) => typeof s === "string" && pertence(servicosAwsDisponiveis(), s));
+    const microsservicos = dados
+        .getAll("microsservicos")
+        .filter((m) => typeof m === "string" && pertence(microsservicosDisponiveis(), m));
+    const pessoas = dados
+        .getAll("pessoas")
+        .filter((p) => typeof p === "string" && pertence(pessoasDisponiveis(), p));
     // Os pertence() se repetem aqui só para o compilador estreitar string -> tipo da lista.
     if (Object.keys(erros).length > 0 ||
         !pertence(TIPOS_ITEM, tipo) ||
@@ -275,6 +362,10 @@ function validar(dados) {
             okrs,
             squad,
             siglas,
+            camadas,
+            servicosAws,
+            microsservicos,
+            pessoas,
             dataInicio,
             dataFim,
             release,
@@ -283,6 +374,7 @@ function validar(dados) {
             historia,
             gmud,
             git,
+            pdi,
         },
     };
 }
@@ -294,18 +386,22 @@ const botaoCancelar = el("btn-cancelar");
 const corpoTabela = el("corpo-tabela");
 const contador = el("contador");
 const campoTipo = el("tipo");
-const listaOkrs = el("lista-okrs");
-const botaoAdicionarOkr = el("btn-adicionar-okr");
-const campoSquad = el("squad");
+const listaSquads = el("lista-squads");
 const campoRelease = el("release");
 const campoSprint = el("sprint");
 const filtroRelease = el("filtro-release");
 const filtroSprint = el("filtro-sprint");
 const filtroImpeditivo = el("filtro-impeditivo");
+const buscaTabela = el("busca-tabela");
 const botaoExportar = el("btn-exportar");
 const campoImportar = el("importar");
 const campoGmudNome = el("gmudNome");
 const listaSiglas = el("lista-siglas");
+const listaCamadas = el("lista-camadas");
+const listaServicosAws = el("lista-servicos-aws");
+const listaMicrosservicos = el("lista-microsservicos");
+const listaPessoas = el("lista-pessoas");
+const secaoGmudTitulo = el("sec-gmud-titulo");
 const secaoClassificacao = el("sec-classificacao");
 const secaoFuncional = el("sec-funcional");
 const secaoGmud = el("sec-gmud");
@@ -320,27 +416,89 @@ function preencherSelect(select, opcoes) {
     for (const opcao of opcoes)
         select.append(new Option(opcao, opcao));
 }
-function adicionarCaixaSigla(sigla, marcada = false) {
-    const rotulo = document.createElement("label");
-    const caixa = document.createElement("input");
-    caixa.type = "checkbox";
-    caixa.name = "siglas";
-    caixa.value = sigla;
-    caixa.checked = marcada;
-    rotulo.append(caixa, ` ${sigla}`);
-    listaSiglas.append(rotulo);
+// Pílula clicável: o input (radio ou checkbox) fica escondido dentro do
+// <label> e o CSS pinta o <span> quando ele está marcado (ver .escolha em style.css).
+function criarEscolha(tipo, nome, valor, rotulo, marcada = false) {
+    const escolha = document.createElement("label");
+    escolha.className = "escolha";
+    const entrada = document.createElement("input");
+    entrada.type = tipo;
+    entrada.name = nome;
+    entrada.value = valor;
+    entrada.checked = marcada;
+    // defaultChecked: o reset() do formulário volta para esta marcação.
+    entrada.defaultChecked = marcada;
+    const texto = document.createElement("span");
+    texto.append(rotulo);
+    escolha.append(entrada, texto);
+    return escolha;
+}
+const LISTA_SIGLAS = {
+    lista: listaSiglas,
+    nome: "siglas",
+    chave: CHAVE_SIGLAS,
+    cadastradas: siglasCadastradas,
+    disponiveis: siglasDisponiveis,
+};
+const LISTA_SERVICOS_AWS = {
+    lista: listaServicosAws,
+    nome: "servicosAws",
+    chave: CHAVE_SERVICOS_AWS,
+    cadastradas: servicosAwsCadastrados,
+    disponiveis: servicosAwsDisponiveis,
+};
+const LISTA_MICROSSERVICOS = {
+    lista: listaMicrosservicos,
+    nome: "microsservicos",
+    chave: CHAVE_MICROSSERVICOS,
+    cadastradas: microsservicosCadastrados,
+    disponiveis: microsservicosDisponiveis,
+};
+const LISTA_PESSOAS = {
+    lista: listaPessoas,
+    nome: "pessoas",
+    chave: CHAVE_PESSOAS,
+    cadastradas: pessoasCadastradas,
+    disponiveis: pessoasDisponiveis,
+};
+function refazerLista({ lista, nome, disponiveis }) {
+    const marcadas = new Set([...lista.querySelectorAll("input:checked")].map((caixa) => caixa.value));
+    lista.replaceChildren(...disponiveis().map((opcao) => criarEscolha("checkbox", nome, opcao, opcao, marcadas.has(opcao))));
+    if (disponiveis().length === 0) {
+        lista.append(Object.assign(document.createElement("span"), { className: "dica", textContent: "Nenhum cadastrado ainda." }));
+    }
+}
+// Opção já existente (mesmo com outra caixa) só é marcada, sem duplicar. A nova já entra marcada.
+function cadastrarNaLista(alvo, valor) {
+    const existente = encontrarOpcao(alvo.disponiveis(), valor);
+    if (!existente) {
+        alvo.cadastradas.push(valor);
+        localStorage.setItem(alvo.chave, JSON.stringify(alvo.cadastradas));
+        alvo.lista.querySelector("span.dica")?.remove();
+        alvo.lista.append(criarEscolha("checkbox", alvo.nome, valor, valor, true));
+        return;
+    }
+    const caixa = alvo.lista.querySelector(`input[value="${CSS.escape(existente)}"]`);
+    if (caixa)
+        caixa.checked = true;
+}
+function marcarCaixas(lista, valores) {
+    for (const caixa of lista.querySelectorAll("input"))
+        caixa.checked = valores.includes(caixa.value);
+}
+function adicionarSquad(squad, marcada = false) {
+    listaSquads.append(criarEscolha("radio", "squad", squad, squad, marcada));
 }
 // Squads e siglas podem ter mudado (cadastro ou importação): refaz as opções
 // mantendo o que estava escolhido.
 function preencherSquadsESiglas() {
-    const squadAtual = campoSquad.value;
-    campoSquad.replaceChildren();
-    preencherSelect(campoSquad, squadsDisponiveis());
-    campoSquad.value = squadAtual;
-    const marcadas = new Set([...listaSiglas.querySelectorAll("input:checked")].map((caixa) => caixa.value));
-    listaSiglas.replaceChildren();
-    for (const sigla of siglasDisponiveis())
-        adicionarCaixaSigla(sigla, marcadas.has(sigla));
+    const squadAtual = radioMarcado("squad");
+    listaSquads.replaceChildren();
+    for (const squad of squadsDisponiveis())
+        adicionarSquad(squad);
+    marcarRadio("squad", squadAtual);
+    for (const alvo of [LISTA_SIGLAS, LISTA_SERVICOS_AWS, LISTA_MICROSSERVICOS, LISTA_PESSOAS])
+        refazerLista(alvo);
 }
 // Squad já existente (mesmo com outra caixa) só é selecionada, sem duplicar.
 function cadastrarSquad(nome) {
@@ -350,9 +508,9 @@ function cadastrarSquad(nome) {
     if (!existente) {
         squadsCadastradas.push(nome);
         localStorage.setItem(CHAVE_SQUADS, JSON.stringify(squadsCadastradas));
-        campoSquad.append(new Option(nome, nome));
+        adicionarSquad(nome);
     }
-    campoSquad.value = existente ?? nome;
+    marcarRadio("squad", existente ?? nome);
     return null;
 }
 // Siglas são códigos: ficam sempre em maiúsculas. A nova já entra marcada.
@@ -362,16 +520,28 @@ function cadastrarSigla(valor) {
         return "Informe a sigla.";
     if (/\s/.test(sigla))
         return "A sigla não pode ter espaços.";
-    const existente = encontrarOpcao(siglasDisponiveis(), sigla);
-    if (existente) {
-        const caixa = listaSiglas.querySelector(`input[value="${CSS.escape(existente)}"]`);
-        if (caixa)
-            caixa.checked = true;
-        return null;
-    }
-    siglasCadastradas.push(sigla);
-    localStorage.setItem(CHAVE_SIGLAS, JSON.stringify(siglasCadastradas));
-    adicionarCaixaSigla(sigla, true);
+    cadastrarNaLista(LISTA_SIGLAS, sigla);
+    return null;
+}
+function cadastrarServicoAws(valor) {
+    if (!valor)
+        return "Informe o serviço AWS.";
+    cadastrarNaLista(LISTA_SERVICOS_AWS, valor);
+    return null;
+}
+function cadastrarPessoa(valor) {
+    if (!valor)
+        return "Informe o nome da pessoa.";
+    cadastrarNaLista(LISTA_PESSOAS, valor);
+    return null;
+}
+// Nome como está no repositório/cluster (ex.: ms-reservas): mantém a caixa digitada.
+function cadastrarMicrosservico(valor) {
+    if (!valor)
+        return "Informe o nome do microsserviço.";
+    if (/\s/.test(valor))
+        return "Use o nome sem espaços (ex.: ms-reservas).";
+    cadastrarNaLista(LISTA_MICROSSERVICOS, valor);
     return null;
 }
 // "+ Nova squad" que se abre em campo + Adicionar/Cancelar. O campo não tem
@@ -421,32 +591,6 @@ function criarCadastroRapido(container, rotulo, aoAdicionar) {
     linha.append(campo, criarBotao("Adicionar", "", confirmar), criarBotao("Cancelar", "secundario", fechar));
     container.append(abrir, linha, erro);
 }
-function adicionarLinhaOkr(impacto) {
-    const linha = document.createElement("div");
-    linha.className = "linha-okr";
-    const okr = document.createElement("select");
-    okr.name = "okr";
-    okr.ariaLabel = "OKR impactado";
-    preencherSelect(okr, OKRS);
-    const grau = document.createElement("select");
-    grau.name = "okrGrau";
-    grau.ariaLabel = "Grau de impacto";
-    grau.append(new Option("Grau de impacto...", ""));
-    for (const opcao of GRAUS_IMPACTO)
-        grau.append(new Option(opcao, opcao));
-    const motivo = document.createElement("input");
-    motivo.type = "text";
-    motivo.name = "okrMotivo";
-    motivo.ariaLabel = "Motivo do impacto";
-    motivo.placeholder = "Motivo do impacto";
-    if (impacto) {
-        okr.value = impacto.okr;
-        grau.value = impacto.grau ?? "";
-        motivo.value = impacto.motivo;
-    }
-    linha.append(okr, grau, motivo, criarBotao("Remover", "perigo", () => linha.remove()));
-    listaOkrs.append(linha);
-}
 function radioMarcado(nome) {
     const radio = formulario.querySelector(`input[name="${nome}"]:checked`);
     return radio?.value ?? "";
@@ -476,6 +620,8 @@ function atualizarCamposCondicionais() {
     // A ordem importa: sec-actions fica dentro de sec-git.
     mostrar(secaoGit, houveAlteracaoGit);
     mostrar(secaoActions, houveAlteracaoGit && temGmud);
+    // O nome da GMUD só aparece quando há GMUD informada.
+    mostrar(secaoGmudTitulo, temGmud);
 }
 function exibirErros(erros) {
     for (const alvo of formulario.querySelectorAll("[data-erro]")) {
@@ -484,8 +630,8 @@ function exibirErros(erros) {
 }
 function limparFormulario() {
     formulario.reset();
-    listaOkrs.replaceChildren();
-    adicionarLinhaOkr();
+    preencherVinculoPdi(null); // pdi.ts: volta para a versão mais recente, sem vínculo
+    preencherOkrsEntrega([]); // okrs.ts: todos os OKRs fechados, sem escolha
     idEmEdicao = null;
     tituloFormulario.textContent = "Novo registro";
     botaoSalvar.textContent = "Adicionar registro";
@@ -505,10 +651,8 @@ function iniciarEdicao(registro) {
     limparFormulario();
     idEmEdicao = registro.id;
     definirValor("tipo", registro.tipo);
-    listaOkrs.replaceChildren();
-    for (const impacto of registro.okrs)
-        adicionarLinhaOkr(impacto);
-    definirValor("squad", registro.squad);
+    preencherOkrsEntrega(registro.okrs); // okrs.ts
+    marcarRadio("squad", registro.squad);
     definirValor("assunto", registro.assunto);
     definirValor("descricao", registro.descricao);
     definirValor("dataInicio", registro.dataInicio);
@@ -518,19 +662,23 @@ function iniciarEdicao(registro) {
     definirValor("impeditivo", registro.impeditivo);
     if (registro.historia) {
         marcarRadio("classificacao", registro.historia.funcional ? "funcional" : "nao-funcional");
-        if (registro.historia.funcional) {
+        definirValor("complexidade", registro.historia.complexidade?.toString() ?? "");
+        if (registro.historia.funcional)
             definirValor("bcp", registro.historia.bcp);
-            definirValor("complexidade", registro.historia.complexidade?.toString() ?? "");
-        }
     }
     definirValor("gmudNome", registro.gmud?.nome ?? "");
     definirValor("gmudLink", registro.gmud?.link ?? "");
+    definirValor("gmudTitulo", registro.gmud?.titulo ?? "");
     marcarRadio("git", registro.git ? "sim" : "nao");
     definirValor("linkPr", registro.git?.linkPullRequest ?? "");
     definirValor("linkActions", registro.git?.linkActions ?? "");
-    for (const caixa of listaSiglas.querySelectorAll("input")) {
-        caixa.checked = registro.siglas.includes(caixa.value);
-    }
+    marcarCaixas(listaSiglas, registro.siglas);
+    marcarCaixas(listaCamadas, registro.camadas);
+    marcarCaixas(listaServicosAws, registro.servicosAws);
+    marcarCaixas(listaMicrosservicos, registro.microsservicos);
+    marcarCaixas(listaPessoas, registro.pessoas);
+    // pdi.ts: versão, ponto e intensidade do registro, mesmo que o ponto já tenha saído do PDI.
+    preencherVinculoPdi(registro.pdi);
     tituloFormulario.textContent = "Editando registro";
     botaoSalvar.textContent = "Salvar alterações";
     botaoCancelar.textContent = "Cancelar edição";
@@ -539,7 +687,9 @@ function iniciarEdicao(registro) {
 }
 function aoEnviar(evento) {
     evento.preventDefault();
-    const resultado = validar(new FormData(formulario));
+    const dados = new FormData(formulario);
+    anexarOkrsDoFormulario(dados); // okrs.ts: um item por OKR escolhido
+    const resultado = validar(dados);
     if (!resultado.ok) {
         exibirErros(resultado.erros);
         formulario.querySelector("[data-erro]:not(:empty)")?.scrollIntoView({ block: "center" });
@@ -596,17 +746,17 @@ function criarLinha(registro) {
     let complexidade = VAZIO;
     if (historia) {
         classificacao = historia.funcional ? "Funcional" : "Não funcional";
-        if (historia.funcional) {
+        complexidade = historia.complexidade?.toString() ?? VAZIO;
+        if (historia.funcional)
             bcp = historia.bcp;
-            complexidade = historia.complexidade?.toString() ?? VAZIO;
-        }
     }
     const okrs = document.createElement("div");
     okrs.className = "okrs-celula";
     for (const impacto of registro.okrs) {
         const item = document.createElement("div");
         const detalhe = [impacto.grau ?? "grau não informado", impacto.motivo].filter(Boolean).join(": ");
-        item.textContent = `${impacto.okr} (${detalhe})`;
+        const kr = impacto.kr ? ` · ${impacto.kr}` : "";
+        item.textContent = `${impacto.okr}${kr} (${detalhe})`;
         okrs.append(item);
     }
     if (registro.okrs.length === 0)
@@ -625,10 +775,15 @@ function criarLinha(registro) {
         classificacao,
         bcp,
         complexidade,
-        gmud ? (gmud.link ? criarLink(gmud.link, gmud.nome) : gmud.nome) : VAZIO,
+        gmud ? (gmud.link ? criarLink(gmud.link, rotuloGmud(gmud)) : rotuloGmud(gmud)) : VAZIO,
         okrs,
+        textoDoVinculoPdi(registro.pdi), // pdi.ts
         registro.squad,
         registro.siglas.join(", ") || VAZIO,
+        registro.camadas.join(", ") || VAZIO,
+        registro.servicosAws.join(", ") || VAZIO,
+        registro.microsservicos.join(", ") || VAZIO,
+        registro.pessoas.join(", ") || VAZIO,
         formatarData(registro.dataInicio),
         formatarData(registro.dataFim),
         `${leadTimeEmDias(registro)} d`,
@@ -662,27 +817,42 @@ function passaNosFiltros(registro) {
         return false;
     return true;
 }
+// Linha única ocupando todas as colunas, para tabela vazia ou busca sem resultado.
+function mostrarTabelaVazia(texto) {
+    const linha = document.createElement("tr");
+    const celula = document.createElement("td");
+    celula.colSpan = 25;
+    celula.className = "vazio";
+    celula.textContent = texto;
+    linha.append(celula);
+    corpoTabela.replaceChildren(linha);
+}
 function renderizarTabela() {
     const total = registros.length;
-    const visiveis = registros.filter(passaNosFiltros);
+    // Entregas mais recentes primeiro. A busca olha o texto de todas as colunas da
+    // linha (inclusive pessoas, GMUD e PDI), sem diferenciar acento nem maiúscula.
+    const palavras = semAcentoNaBusca(buscaTabela.value).split(/\s+/).filter(Boolean);
+    const linhas = registros
+        .filter(passaNosFiltros)
+        .sort((a, b) => b.dataFim.localeCompare(a.dataFim))
+        .map(criarLinha)
+        .filter((linha) => {
+        const conteudo = semAcentoNaBusca(linha.textContent ?? "");
+        return palavras.every((palavra) => conteudo.includes(palavra));
+    });
     const totalTexto = total === 1 ? "1 registro" : `${total} registros`;
-    contador.textContent = visiveis.length === total ? totalTexto : `${visiveis.length} de ${totalTexto}`;
-    if (visiveis.length === 0) {
-        const linha = document.createElement("tr");
-        const celula = document.createElement("td");
-        celula.colSpan = 20;
-        celula.className = "vazio";
-        celula.textContent =
-            total === 0
-                ? "Nenhum registro ainda. Use o formulário acima para adicionar o primeiro."
-                : "Nenhum registro corresponde aos filtros selecionados.";
-        linha.append(celula);
-        corpoTabela.replaceChildren(linha);
-        return;
-    }
-    // Entregas mais recentes primeiro.
-    const ordenados = [...visiveis].sort((a, b) => b.dataFim.localeCompare(a.dataFim));
-    corpoTabela.replaceChildren(...ordenados.map(criarLinha));
+    contador.textContent = linhas.length === total ? totalTexto : `${linhas.length} de ${totalTexto}`;
+    if (total === 0)
+        mostrarTabelaVazia("Nenhum registro ainda. Use o formulário acima para adicionar o primeiro.");
+    else if (linhas.length === 0 && palavras.length > 0)
+        mostrarTabelaVazia(`Nenhum registro encontrado para "${buscaTabela.value.trim()}".`);
+    else if (linhas.length === 0)
+        mostrarTabelaVazia("Nenhum registro corresponde aos filtros selecionados.");
+    else
+        corpoTabela.replaceChildren(...linhas);
+}
+function semAcentoNaBusca(texto) {
+    return texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 }
 // ---------- Exportar / importar JSON ----------
 function exportarJson() {
@@ -701,20 +871,28 @@ function exportarJson() {
 // ele, a página do S3 é montada aqui mesmo, sem Node nem AWS CLI: é o caminho
 // para PCs onde não dá para baixar o repositório.
 const fonteDoArquivoUnico = window.fonteDoArquivoUnico;
-function gerarPaginaPublicada() {
+async function gerarPaginaPublicada() {
     if (!fonteDoArquivoUnico)
         return;
     if (registros.length === 0) {
         alert("Não há entregas para publicar: importe o CSV primeiro.");
         return;
     }
+    // Os vínculos com o PDI não vão abertos: seguem cifrados, junto com o PDI,
+    // na tag de tagDoPdiPublicado (pdi.ts), que só a senha do coordenador abre.
+    // Pessoas envolvidas também ficam fora: só servem para a aba de edição.
+    const semPdi = registros.map((r) => ({ ...r, pdi: null, pessoas: [] }));
     // Mesmo formato do `npm run publicar --json`: "<" escapado para nenhum texto
     // fechar a tag <script> antes da hora.
-    const json = JSON.stringify(registros).replaceAll("<", "\\u003c");
+    const json = JSON.stringify(semPdi).replaceAll("<", "\\u003c");
+    const tagPdi = await tagDoPdiPublicado();
+    // Catálogo de OKRs/KRs, para o dashboard mostrar títulos (ver carregarObjetivos em okrs.ts).
+    const okrs = JSON.stringify(carregarObjetivos()).replaceAll("<", "\\u003c");
+    const tagOkrs = `<script type="application/json" id="okrs-publicados">${okrs}</script>\n`;
     const scripts = [...document.querySelectorAll("script[data-app]")]
         .map((script) => `<script data-app>${script.textContent ?? ""}</script>`)
         .join("\n");
-    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}</script>\n${scripts}\n</body>`);
+    const pagina = fonteDoArquivoUnico.replace("</body>", () => `<script type="application/json" id="dados-publicados">${json}</script>\n${tagOkrs}${tagPdi}${scripts}\n</body>`);
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob([pagina], { type: "text/html" }));
     link.download = `registro-entregas-publicado-${new Date().toISOString().slice(0, 10)}.html`;
@@ -763,6 +941,15 @@ function errosDoRegistroJson(r, posicao) {
     }
     if (!r.siglas.every((sigla) => typeof sigla === "string"))
         erros.push(`${onde}: siglas devem ser textos.`);
+    if (r.camadas !== undefined && (!Array.isArray(r.camadas) || !r.camadas.every((c) => pertence(CAMADAS, c)))) {
+        erros.push(`${onde}: camadas deve ser uma lista com: ${lista(CAMADAS)}.`);
+    }
+    for (const campo of ["servicosAws", "microsservicos", "pessoas"]) {
+        const valor = r[campo];
+        if (valor !== undefined && (!Array.isArray(valor) || !valor.every((v) => typeof v === "string"))) {
+            erros.push(`${onde}: ${campo} deve ser uma lista de textos.`);
+        }
+    }
     if (r.okrs !== undefined && !Array.isArray(r.okrs))
         erros.push(`${onde}: okrs deve ser uma lista.`);
     for (const impacto of Array.isArray(r.okrs) ? r.okrs : []) {
@@ -770,10 +957,24 @@ function errosDoRegistroJson(r, posicao) {
             erros.push(`${onde}: cada item de okrs deve ser { "okr", "grau", "motivo" }.`);
             continue;
         }
-        if (!pertence(OKRS, impacto.okr))
-            erros.push(`${onde}: OKR "${impacto.okr}" inválido. Use: ${lista(OKRS)}.`);
+        if (!pertence(okrsDisponiveis(), impacto.okr)) {
+            erros.push(`${onde}: OKR "${impacto.okr}" inválido. Use: ${lista(okrsDisponiveis())} (ou cadastre-o).`);
+        }
+        if (impacto.kr != null && typeof impacto.kr !== "string")
+            erros.push(`${onde}: kr deve ser texto ou null.`);
         if (impacto.grau !== null && !pertence(GRAUS_IMPACTO, impacto.grau)) {
             erros.push(`${onde}: grau "${impacto.grau}" inválido. Use: ${lista(GRAUS_IMPACTO)}.`);
+        }
+    }
+    if (r.pdi != null) {
+        const { ponto, intensidade } = r.pdi;
+        if (r.pdi.versao != null && typeof r.pdi.versao !== "string")
+            erros.push(`${onde}: pdi.versao deve ser texto.`);
+        if (typeof ponto !== "string" || !PADRAO_PONTO_PDI.test(ponto)) {
+            erros.push(`${onde}: pdi.ponto deve ser "gap_<id>" ou "exp_<id>".`);
+        }
+        if (!pertence(INTENSIDADES_PDI, intensidade)) {
+            erros.push(`${onde}: pdi.intensidade "${intensidade}" inválida. Use: ${lista(INTENSIDADES_PDI)}.`);
         }
     }
     return erros;
@@ -824,8 +1025,28 @@ function aplicarImportacao(importados) {
     const mensagem = `Importar ${importados.length} registro(s)? Registros com o mesmo id serão substituídos pelos do arquivo.`;
     if (!confirm(mensagem))
         return;
+    // O CSV pode não trazer o vínculo com o PDI, camadas, serviços AWS,
+    // microsserviços, pessoas nem o nome da GMUD: reimportar a planilha da semana não pode apagar o que foi
+    // preenchido no formulário. Campo vazio no arquivo mantém o valor atual.
+    const atuais = new Map(registros.map((r) => [r.id, r]));
+    const preservados = importados.map((r) => {
+        const atual = atuais.get(r.id);
+        if (!atual)
+            return r;
+        return {
+            ...r,
+            pdi: r.pdi ?? atual.pdi,
+            camadas: r.camadas.length > 0 ? r.camadas : atual.camadas,
+            servicosAws: r.servicosAws.length > 0 ? r.servicosAws : atual.servicosAws,
+            microsservicos: r.microsservicos.length > 0 ? r.microsservicos : atual.microsservicos,
+            pessoas: r.pessoas.length > 0 ? r.pessoas : atual.pessoas,
+            // CSV sem okrNKr: o KR escolhido no formulário continua no mesmo OKR.
+            okrs: r.okrs.map((o) => (o.kr ? o : { ...o, kr: atual.okrs.find((a) => a.okr === o.okr)?.kr ?? null })),
+            gmud: r.gmud && !r.gmud.titulo && atual.gmud?.nome === r.gmud.nome ? { ...r.gmud, titulo: atual.gmud.titulo ?? null } : r.gmud,
+        };
+    });
     const idsImportados = new Set(importados.map((r) => r.id));
-    registros = [...registros.filter((r) => !idsImportados.has(r.id)), ...importados];
+    registros = [...registros.filter((r) => !idsImportados.has(r.id)), ...preservados];
     salvarRegistros(registros);
     preencherSquadsESiglas();
     limparFormulario();
@@ -846,6 +1067,10 @@ filtroSprint.append(new Option("Sem sprint", "sem"));
 preencherSquadsESiglas();
 criarCadastroRapido(el("nova-squad"), "Nova squad", cadastrarSquad);
 criarCadastroRapido(el("nova-sigla"), "Nova sigla", cadastrarSigla);
+criarCadastroRapido(el("novo-servico-aws"), "Novo serviço AWS", cadastrarServicoAws);
+criarCadastroRapido(el("novo-microsservico"), "Novo microsserviço", cadastrarMicrosservico);
+criarCadastroRapido(el("nova-pessoa"), "Nova pessoa", cadastrarPessoa);
+listaCamadas.append(...CAMADAS.map((camada) => criarEscolha("checkbox", "camadas", camada, camada)));
 // A release segue o trimestre da data de fim: escolher a data já preenche a release.
 el("dataFim").addEventListener("change", (evento) => {
     const data = evento.target.value;
@@ -855,15 +1080,14 @@ el("dataFim").addEventListener("change", (evento) => {
 formulario.addEventListener("submit", aoEnviar);
 formulario.addEventListener("input", atualizarCamposCondicionais);
 botaoCancelar.addEventListener("click", limparFormulario);
-botaoAdicionarOkr.addEventListener("click", () => adicionarLinhaOkr());
 filtroRelease.addEventListener("change", renderizarTabela);
 filtroSprint.addEventListener("change", renderizarTabela);
 filtroImpeditivo.addEventListener("change", renderizarTabela);
+buscaTabela.addEventListener("input", renderizarTabela);
 botaoExportar.addEventListener("click", exportarJson);
 const botaoGerarPublicada = el("btn-gerar-publicada");
 botaoGerarPublicada.hidden = !fonteDoArquivoUnico;
-botaoGerarPublicada.addEventListener("click", gerarPaginaPublicada);
+botaoGerarPublicada.addEventListener("click", () => void gerarPaginaPublicada());
 campoImportar.addEventListener("change", importarJson);
-adicionarLinhaOkr();
 atualizarCamposCondicionais();
-renderizarTabela();
+// A tabela é desenhada pela primeira vez em pdi.ts: a coluna PDI depende dele.
