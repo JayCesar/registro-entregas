@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark" data-accent="lima">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Júlio César em 2026 - Registro de entregas</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <!-- Sem defer e antes do CSS: aplica o tema salvo antes do primeiro render (ver src/tema.ts). -->
+  <script src="dist/tema.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <!-- Gerados por `npm run build` a partir de src/*.ts. A ordem importa: config antes de app. -->
+  <script src="dist/config.js" defer></script>
+  <script src="dist/app.js" defer></script>
+  <script src="dist/csv.js" defer></script>
+  <script src="dist/perfil.js" defer></script>
+  <script src="dist/icones.js" defer></script>
+  <script src="dist/graficos.js" defer></script>
+  <script src="dist/dashboard.js" defer></script>
+  <script src="dist/abas.js" defer></script>
+</head>
+<body>
+  <!-- Trilho lateral: navegação entre as seções do dashboard e atalho para a edição.
+       Os ícones são preenchidos por icones.ts a partir de data-icone. -->
+  <aside class="trilho" aria-label="Navegação">
+    <div class="trilho-marca" aria-hidden="true"><span data-icone="marca"></span></div>
+    <nav class="trilho-nav" id="trilho-nav">
+      <a href="#sec-visao" title="Visão geral"><span data-icone="grade"></span><span class="trilho-rotulo">Visão geral</span></a>
+      <a href="#sec-indicadores" title="Indicadores"><span data-icone="medidor"></span><span class="trilho-rotulo">Indicadores</span></a>
+      <a href="#sec-volumetria" title="Volumetria"><span data-icone="barras"></span><span class="trilho-rotulo">Volumetria</span></a>
+      <a href="#sec-impacto" title="Impacto"><span data-icone="alvo"></span><span class="trilho-rotulo">Impacto</span></a>
+      <a href="#sec-entregas" title="Entregas"><span data-icone="lista"></span><span class="trilho-rotulo">Entregas</span></a>
+    </nav>
+    <div class="trilho-rodape">
+      <!-- Interruptor de tema, fixo no trilho: a bolinha fica na lua (escuro) ou no sol (claro). -->
+      <button type="button" class="tema-alternador" id="btn-tema" role="switch">
+        <span data-icone="lua"></span>
+        <span data-icone="sol"></span>
+        <span class="trilho-rotulo" id="btn-tema-rotulo"></span>
+      </button>
+      <button type="button" class="trilho-botao" id="trilho-edicao" title="Edição (restrito)">
+        <span data-icone="lapis"></span><span class="trilho-rotulo">Edição</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="app">
+  <header class="topo">
+    <div class="perfil">
+      <!-- Foto enviada na aba de edição; sem foto, aparecem as iniciais (ver src/perfil.ts). -->
+      <div class="perfil-avatar">
+        <img id="perfil-foto" alt="" hidden>
+        <span id="perfil-iniciais" aria-hidden="true"></span>
+      </div>
+      <div>
+        <h1>Registro de entregas</h1>
+        <p class="perfil-nome" id="perfil-nome"></p>
+      </div>
+    </div>
+
+    <nav class="abas">
+      <button type="button" id="aba-dashboard" class="aba">Entregas</button>
+      <button type="button" id="aba-edicao" class="aba">Edição (restrito)</button>
+      <button type="button" id="btn-bloquear" class="secundario" hidden>Bloquear edição</button>
+    </nav>
+
+    <div class="tema-controles">
+      <!-- Amostras criadas por tema.ts a partir da lista DESTAQUES. -->
+      <div class="destaques" id="lista-destaques" role="group" aria-label="Cor de destaque"></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Aba dos gestores: somente leitura, sem senha. Preenchida por dashboard.ts.
+         É uma página única dividida em seções (#sec-*), navegáveis pelo trilho lateral. -->
+    <div class="painel" id="painel-dashboard">
+      <!-- Filtros: fixos no topo ao rolar; combinam entre si e valem para todas as seções. -->
+      <section class="filtros-dash">
+        <!-- Grupos de chips criados por dashboard.ts; o chip ativo tem aria-pressed="true". -->
+        <!-- Ano › Release (trimestre) › Sprint: do mais amplo ao mais fino. -->
+        <div class="filtro-grupo">
+          <span class="filtro-rotulo" id="rotulo-ano">Ano</span>
+          <div class="segmentado" id="dash-ano" role="group" aria-labelledby="rotulo-ano"></div>
+        </div>
+        <span class="filtro-seta" aria-hidden="true">›</span>
+        <div class="filtro-grupo">
+          <span class="filtro-rotulo" id="rotulo-release">Release</span>
+          <div class="segmentado" id="dash-release" role="group" aria-labelledby="rotulo-release"></div>
+        </div>
+        <span class="filtro-seta" aria-hidden="true">›</span>
+        <div class="filtro-grupo">
+          <span class="filtro-rotulo" id="rotulo-sprint">
+            Sprint <span class="filtro-dica" id="dash-sprint-dica">escolha uma release</span>
+          </span>
+          <div class="segmentado" id="dash-sprint" role="group" aria-labelledby="rotulo-sprint"></div>
+        </div>
+        <div class="filtros-dash-resumo">
+          <span id="dash-resumo-filtros" class="dica"></span>
+          <button type="button" id="dash-release-atual" class="secundario">Release atual</button>
+          <button type="button" id="dash-limpar" class="secundario" hidden>Limpar filtros</button>
+        </div>
+      </section>
+
+      <section class="cartao" id="dash-vazio" hidden>
+        <p class="estado-vazio" id="dash-vazio-texto"></p>
+      </section>
+
+      <div class="secoes" id="dash-conteudo">
+        <!-- 01 · Hero: total, composição por tipo e cartões de tipo (clicáveis = filtro). -->
+        <section class="secao hero" id="sec-visao">
+          <div class="hero-linhas" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="hero-topo">
+            <div class="hero-texto" id="dash-hero-texto"></div>
+            <div class="hero-visual" id="dash-hero-visual"></div>
+          </div>
+          <div class="tipos-cabecalho">
+            <span class="tipos-cabecalho-icone" data-icone="cursor"></span>
+            <div>
+              <strong>Explore por tipo de item</strong>
+              <span class="dica">Clique num cartão (ou numa fatia da rosca) para focar a página inteira nele. Clique de novo para voltar.</span>
+            </div>
+          </div>
+          <div class="tipos-trilha" id="dash-tipos" role="group" aria-label="Filtrar por tipo de item"></div>
+          <button type="button" class="hero-explorar" id="dash-explorar">
+            <span>Explorar indicadores</span><span data-icone="seta-baixo"></span>
+          </button>
+        </section>
+
+        <section class="secao" id="sec-indicadores">
+          <header class="secao-cabecalho">
+            <span class="secao-numero">02</span>
+            <div>
+              <h2>Indicadores</h2>
+              <p class="dica">Ritmo, alcance nos OKRs e saúde das entregas da seleção.</p>
+            </div>
+          </header>
+          <div class="faixa-kpis" id="dash-kpis"></div>
+        </section>
+
+        <section class="secao" id="sec-volumetria">
+          <header class="secao-cabecalho">
+            <span class="secao-numero">03</span>
+            <div>
+              <h2>Volumetria</h2>
+              <p class="dica">Quanto foi entregue em cada release, sprint e mês.</p>
+            </div>
+          </header>
+          <!-- Big numbers do volume (médias e picos), antes dos gráficos. -->
+          <div class="faixa-numeros" id="dash-numeros-volume"></div>
+          <!-- Grid de 12 colunas; os cartões são criados por dashboard.ts. -->
+          <div class="grade-12" id="dash-graficos-volume"></div>
+        </section>
+
+        <section class="secao" id="sec-impacto">
+          <header class="secao-cabecalho">
+            <span class="secao-numero">04</span>
+            <div>
+              <h2>Impacto nos OKRs</h2>
+              <p class="dica">Quantas entregas moveram cada OKR e com que força (alto, médio ou baixo). Clique num OKR para ver cada entrega e o motivo.</p>
+            </div>
+          </header>
+          <!-- Cartões por OKR + detalhe do OKR escolhido (criados por renderizarOkrs). -->
+          <div class="okr-painel" id="dash-okrs"></div>
+          <div class="grade-12" id="dash-graficos-impacto"></div>
+        </section>
+
+        <section class="secao" id="sec-entregas">
+          <header class="secao-cabecalho">
+            <span class="secao-numero">05</span>
+            <div>
+              <h2>Entregas em detalhe</h2>
+              <p class="dica" id="dash-periodo"></p>
+            </div>
+          </header>
+          <!-- Busca: só filtra a lista abaixo. Os chips de tipo são o mesmo filtro dos cartões do hero. -->
+          <div class="busca-barra">
+            <label class="busca-campo">
+              <span data-icone="lupa"></span>
+              <input type="search" id="dash-busca" placeholder="Buscar por assunto, descrição, squad, BCP, GMUD, OKR…"
+                     autocomplete="off" aria-label="Buscar entrega">
+              <kbd title="Atalho para a busca">/</kbd>
+            </label>
+            <div class="segmentado" id="dash-busca-tipos" role="group" aria-label="Filtrar por tipo de item"></div>
+          </div>
+          <div class="entregas" id="dash-entregas"></div>
+        </section>
+      </div>
+
+      <!-- Detalhes de uma entrega, aberto por "Ver detalhes". Conteúdo criado por dashboard.ts. -->
+      <dialog class="modal" id="dash-modal" aria-labelledby="modal-titulo">
+        <div class="modal-conteudo" id="dash-modal-conteudo"></div>
+      </dialog>
+    </div>
+
+    <!-- Aba de edição: só aparece depois da senha (ver abas.ts). -->
+    <div class="painel" id="painel-senha" hidden>
+      <section class="cartao">
+        <h2>Área restrita</h2>
+        <form id="form-senha" class="form-senha" novalidate>
+          <div class="campo">
+            <label for="senha">Senha de edição</label>
+            <input type="password" id="senha" name="senha" autocomplete="off">
+            <small class="erro" id="erro-senha"></small>
+          </div>
+          <div class="acoes-form">
+            <button type="submit">Entrar</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="painel" id="painel-edicao" hidden>
+    <section class="cartao perfil-edicao">
+      <div>
+        <h2>Foto do perfil</h2>
+        <p class="dica">Aparece no cabeçalho, ao lado do seu nome. É recortada em quadrado e fica salva neste navegador.</p>
+        <small class="erro" id="erro-foto"></small>
+      </div>
+      <div class="acoes-dados">
+        <label class="botao secundario" for="foto-arquivo">Enviar foto</label>
+        <input type="file" id="foto-arquivo" accept="image/*" hidden>
+        <button type="button" id="btn-remover-foto" class="perigo" hidden>Remover foto</button>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2 id="titulo-form">Novo registro</h2>
+
+      <form id="form-registro" novalidate>
+        <div class="grade">
+          <div class="campo">
+            <label for="tipo">Tipo de item *</label>
+            <select id="tipo" name="tipo"></select>
+            <small class="erro" data-erro="tipo"></small>
+          </div>
+
+          <div class="campo">
+            <label for="squad">Squad envolvida *</label>
+            <select id="squad" name="squad"></select>
+            <!-- "+ Nova squad", criado por criarCadastroRapido() em app.ts. -->
+            <div id="nova-squad"></div>
+            <small class="erro" data-erro="squad"></small>
+          </div>
+        </div>
+
+        <div class="grade">
+          <div class="campo">
+            <label for="release">Release *</label>
+            <select id="release" name="release"></select>
+            <small class="erro" data-erro="release"></small>
+          </div>
+
+          <div class="campo">
+            <label for="sprint">Sprint *</label>
+            <select id="sprint" name="sprint"></select>
+            <small class="erro" data-erro="sprint"></small>
+          </div>
+        </div>
+
+        <div class="grade">
+          <fieldset class="campo largo">
+            <legend>OKRs impactados *</legend>
+            <!-- Linhas criadas por adicionarLinhaOkr() em app.ts: OKR, grau de impacto e motivo. -->
+            <div id="lista-okrs"></div>
+            <div>
+              <button type="button" id="btn-adicionar-okr" class="secundario">+ Adicionar OKR</button>
+            </div>
+            <small class="erro" data-erro="okrs"></small>
+          </fieldset>
+        </div>
+
+        <!-- Só para História -->
+        <div class="grade" id="sec-classificacao" hidden>
+          <fieldset class="campo">
+            <legend>Classificação da história *</legend>
+            <div class="opcoes">
+              <label><input type="radio" name="classificacao" value="funcional"> Funcional <span class="dica">(impacta o cliente final)</span></label>
+              <label><input type="radio" name="classificacao" value="nao-funcional"> Não funcional <span class="dica">(infraestrutura)</span></label>
+            </div>
+            <small class="erro" data-erro="classificacao"></small>
+          </fieldset>
+        </div>
+
+        <!-- Só para História funcional -->
+        <div class="grade" id="sec-funcional" hidden>
+          <div class="campo">
+            <label for="bcp">BCP *</label>
+            <input type="text" id="bcp" name="bcp">
+            <small class="erro" data-erro="bcp"></small>
+          </div>
+
+          <div class="campo">
+            <label for="complexidade">Complexidade</label>
+            <input type="number" id="complexidade" name="complexidade" min="0" step="any">
+            <small class="erro" data-erro="complexidade"></small>
+          </div>
+        </div>
+
+        <div class="grade">
+          <div class="campo largo">
+            <label for="assunto">Assunto *</label>
+            <input type="text" id="assunto" name="assunto">
+            <small class="erro" data-erro="assunto"></small>
+          </div>
+
+          <div class="campo largo">
+            <label for="descricao">Breve descrição do que foi feito *</label>
+            <textarea id="descricao" name="descricao" rows="3"></textarea>
+            <small class="erro" data-erro="descricao"></small>
+          </div>
+
+          <div class="campo largo">
+            <label for="impeditivo">Impeditivo <span class="dica">(deixe em branco se não houve)</span></label>
+            <textarea id="impeditivo" name="impeditivo" rows="2"></textarea>
+          </div>
+        </div>
+
+        <div class="grade">
+          <div class="campo">
+            <label for="dataInicio">Data de início *</label>
+            <input type="date" id="dataInicio" name="dataInicio">
+            <small class="erro" data-erro="dataInicio"></small>
+          </div>
+
+          <div class="campo">
+            <label for="dataFim">Data de fim *</label>
+            <input type="date" id="dataFim" name="dataFim">
+            <small class="erro" data-erro="dataFim"></small>
+          </div>
+
+          <fieldset class="campo">
+            <legend>Siglas envolvidas</legend>
+            <div class="opcoes" id="lista-siglas"></div>
+            <div id="nova-sigla"></div>
+          </fieldset>
+        </div>
+
+        <!-- Só para História ou Bug -->
+        <div class="grade" id="sec-gmud" hidden>
+          <div class="campo">
+            <label for="gmudNome">GMUD (nome/número do documento)</label>
+            <input type="text" id="gmudNome" name="gmudNome" placeholder="Ex.: GMUD-12345">
+            <small class="erro" data-erro="gmudNome"></small>
+          </div>
+
+          <div class="campo duplo">
+            <label for="gmudLink">Link da GMUD</label>
+            <input type="url" id="gmudLink" name="gmudLink" placeholder="https://...">
+            <small class="erro" data-erro="gmudLink"></small>
+          </div>
+        </div>
+
+        <div class="grade">
+          <fieldset class="campo">
+            <legend>Houve alteração em repositório Git? *</legend>
+            <div class="opcoes">
+              <label><input type="radio" name="git" value="sim"> Sim</label>
+              <label><input type="radio" name="git" value="nao" checked> Não</label>
+            </div>
+            <small class="erro" data-erro="git"></small>
+          </fieldset>
+        </div>
+
+        <!-- Só quando houve alteração em Git -->
+        <div class="grade" id="sec-git" hidden>
+          <div class="campo">
+            <label for="linkPr">Link da Pull Request</label>
+            <input type="url" id="linkPr" name="linkPr" placeholder="https://github.com/.../pull/123">
+            <small class="erro" data-erro="linkPr"></small>
+          </div>
+
+          <!-- Só quando há GMUD informada -->
+          <div class="campo" id="sec-actions" hidden>
+            <label for="linkActions">Link do GitHub Actions (produção)</label>
+            <input type="url" id="linkActions" name="linkActions" placeholder="https://github.com/.../actions/runs/...">
+            <small class="erro" data-erro="linkActions"></small>
+          </div>
+        </div>
+
+        <div class="acoes-form">
+          <button type="submit" id="btn-salvar">Adicionar registro</button>
+          <button type="button" id="btn-cancelar" class="secundario">Limpar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="cartao">
+      <div class="cabecalho-tabela">
+        <h2>Registros</h2>
+        <span id="contador" class="dica"></span>
+      </div>
+
+      <div class="filtros">
+        <div class="campo">
+          <label for="filtro-release">Release</label>
+          <select id="filtro-release"></select>
+        </div>
+        <div class="campo">
+          <label for="filtro-sprint">Sprint</label>
+          <select id="filtro-sprint"></select>
+        </div>
+        <div class="campo">
+          <label for="filtro-impeditivo">Impeditivo</label>
+          <select id="filtro-impeditivo">
+            <option value="">Todos</option>
+            <option value="com">Com impeditivo</option>
+            <option value="sem">Sem impeditivo</option>
+          </select>
+        </div>
+        <div class="acoes-dados">
+          <button type="button" id="btn-exportar" class="secundario">Exportar JSON</button>
+          <label class="botao secundario" for="importar">Importar JSON</label>
+          <input type="file" id="importar" accept="application/json,.json" hidden>
+          <label class="botao secundario" for="importar-csv">Importar CSV</label>
+          <input type="file" id="importar-csv" accept="text/csv,.csv" hidden>
+        </div>
+      </div>
+
+      <div class="tabela-rolagem">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Assunto</th>
+              <th>Descrição</th>
+              <th>Classificação</th>
+              <th>BCP</th>
+              <th>Complexidade</th>
+              <th>GMUD</th>
+              <th>OKRs impactados</th>
+              <th>Squad</th>
+              <th>Siglas</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Lead time</th>
+              <th>Release</th>
+              <th>Sprint</th>
+              <th>Impeditivo</th>
+              <th>Git</th>
+              <th>Pull Request</th>
+              <th>Actions</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela"></tbody>
+        </table>
+      </div>
+    </section>
+    </div>
+  </main>
+  </div>
+</body>
+</html>

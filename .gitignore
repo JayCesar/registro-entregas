@@ -1,0 +1,11 @@
+node_modules/
+
+# Página gerada por `npm run publicar` (contém os dados embutidos).
+publicar/
+
+# Dados reais das entregas: ficam só no seu PC, nunca no GitHub.
+dados/*
+!dados/modelo-entregas.csv
+
+# Imagens de referência de design usadas durante o desenvolvimento.
+/image*.png

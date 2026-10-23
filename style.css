@@ -1,0 +1,2971 @@
+/* ---------- Tokens de cor ----------
+   Toda cor da aplicação (inclusive dentro dos SVGs) vem daqui. O tema é
+   trocado por data-theme e a cor de destaque por data-accent, ambos no <html>
+   (ver src/tema.ts). Escuro é o padrão. */
+
+:root {
+  --raio: 18px;
+  --raio-pequeno: 10px;
+  --largura-trilho: 84px;
+}
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  /* Grafite com cartões levemente mais claros e brilho sutil nas bordas. */
+  --fundo: #0d0e0f;
+  --fundo-brilho: #161a12;
+  --cartao: #18191b;
+  --cartao-alto: #1f2023;
+  --campo: #232427;
+  --borda: #2a2b2f;
+  --texto: #f3f3f0;
+  --texto-suave: #8e9198;
+  --linha-hover: #202124;
+  --grade: #26272b;
+  --perigo: #f2706b;
+  --sobre-perigo: #0d0e0f;
+  --sobre-destaque: #0d0e0f;
+  --sombra: 0 20px 50px rgb(0 0 0 / 0.45);
+
+  /* Tipos de item: variantes para fundo escuro (CORES_TIPO em config.ts). */
+  --tipo-historia: #9584f8;
+  --tipo-bug: #f2706b;
+  --tipo-oportunidade: #8fd694;
+  --tipo-discovery: #f2c46b;
+  --tipo-task: #6fc0f2;
+
+  /* Séries do gráfico de linhas (ritmo): lilás e rosa, como na referência. */
+  --serie-a: #a99cf5;
+  --serie-b: #f5b8e3;
+  --serie-c: #f5cf8f;
+  --serie-d: #8fd8c4;
+
+  /* OKRs: cor da capa de cada cartão, em rodízio (CORES_OKR em dashboard.ts). */
+  --okr-1: #a99cf5;
+  --okr-2: #7fd6c0;
+  --okr-3: #f2b880;
+  --okr-4: #f29bc4;
+
+  /* Grau de impacto: um único tom de azul; no escuro, quanto maior, mais claro. */
+  --grau-baixo: #1c5cab;
+  --grau-medio: #3987e5;
+  --grau-alto: #9ec5f4;
+  --grau-indefinido: #5a6472;
+  --sobre-grau-baixo: #ffffff;
+  --sobre-grau-medio: #10131a;
+  --sobre-grau-alto: #10131a;
+  --sobre-grau-indefinido: #ffffff;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* Cinza-azulado claro, com cartões brancos e vidro fosco. */
+  --fundo: #e9edf2;
+  --fundo-brilho: #f7f9fb;
+  --cartao: #ffffff;
+  --cartao-alto: #f4f6f9;
+  --campo: #ffffff;
+  --borda: #d6dce4;
+  --texto: #14213d;
+  --texto-suave: #66728a;
+  --linha-hover: #f4f6f9;
+  --grade: #e6eaf0;
+  --perigo: #d23c35;
+  --sobre-perigo: #ffffff;
+  --sobre-destaque: #ffffff;
+  --sombra: 0 20px 50px rgb(20 33 61 / 0.12);
+
+  --tipo-historia: #6a55e0;
+  --tipo-bug: #d9483f;
+  --tipo-oportunidade: #2f9a4f;
+  --tipo-discovery: #c98a0b;
+  --tipo-task: #2588c9;
+
+  --serie-a: #6a55e0;
+  --serie-b: #c94f97;
+  --serie-c: #c98a0b;
+  --serie-d: #1f9a7f;
+
+  --okr-1: #6a55e0;
+  --okr-2: #1f9a7f;
+  --okr-3: #c46a12;
+  --okr-4: #c94f97;
+
+  /* No claro, quanto maior o grau, mais escuro. */
+  --grau-baixo: #86b6ef;
+  --grau-medio: #2a78d6;
+  --grau-alto: #104281;
+  --grau-indefinido: #b4bac2;
+  --sobre-grau-baixo: #1f2933;
+  --sobre-grau-medio: #ffffff;
+  --sobre-grau-alto: #ffffff;
+  --sobre-grau-indefinido: #1f2933;
+}
+
+/* Cor de destaque. Vale no <html> e também em qualquer elemento com
+   data-accent (as amostras do seletor usam isso para mostrar a própria cor). */
+[data-accent="lima"] {
+  --destaque: #d4f36b;
+}
+
+[data-accent="azul"] {
+  --destaque: #7aa7f5;
+}
+
+[data-accent="roxo"] {
+  --destaque: #b39af5;
+}
+
+[data-accent="verde"] {
+  --destaque: #5ecb8c;
+}
+
+[data-accent="laranja"] {
+  --destaque: #f0a35e;
+}
+
+[data-accent="rosa"] {
+  --destaque: #f28cb8;
+}
+
+[data-theme="light"][data-accent="lima"],
+[data-theme="light"] [data-accent="lima"] {
+  --destaque: #4d7c0f;
+}
+
+[data-theme="light"][data-accent="azul"],
+[data-theme="light"] [data-accent="azul"] {
+  --destaque: #2457c5;
+}
+
+[data-theme="light"][data-accent="roxo"],
+[data-theme="light"] [data-accent="roxo"] {
+  --destaque: #6d3fc4;
+}
+
+[data-theme="light"][data-accent="verde"],
+[data-theme="light"] [data-accent="verde"] {
+  --destaque: #1a7a44;
+}
+
+[data-theme="light"][data-accent="laranja"],
+[data-theme="light"] [data-accent="laranja"] {
+  --destaque: #b4530a;
+}
+
+[data-theme="light"][data-accent="rosa"],
+[data-theme="light"] [data-accent="rosa"] {
+  --destaque: #c0306f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* display: grid/flex nas seções sobrescreveria o atributo hidden sem isso. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--texto);
+  background:
+    radial-gradient(1200px 600px at 85% -10%, var(--fundo-brilho), transparent 60%),
+    var(--fundo);
+  background-attachment: fixed;
+}
+
+/* Cada aba é um painel; só um fica visível por vez (ver abas.ts). */
+.painel {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.form-senha {
+  max-width: 320px;
+}
+
+.cartao {
+  /* Sem isso a tabela larga estica a página em vez de rolar dentro do cartão. */
+  min-width: 0;
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 20px 24px;
+}
+
+.cartao h2 {
+  margin: 0 0 16px;
+  font-size: 1.4rem;
+}
+
+/* ---------- Formulário ---------- */
+
+form {
+  display: grid;
+  gap: 16px;
+  max-width: 960px;
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campo.duplo {
+  grid-column: span 2;
+}
+
+.campo.largo {
+  grid-column: 1 / -1;
+}
+
+fieldset.campo {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+label,
+legend {
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="password"],
+select,
+textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  color: inherit;
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 1px;
+}
+
+.opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 8px 0;
+}
+
+.opcoes label {
+  font-weight: 400;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.linha-okr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 3fr) auto;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.dica {
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+
+.erro {
+  color: var(--perigo);
+  font-size: 0.8rem;
+}
+
+.erro:empty {
+  display: none;
+}
+
+.acoes-form {
+  display: flex;
+  gap: 10px;
+}
+
+button {
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border: 1px solid var(--destaque);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: color-mix(in srgb, var(--destaque) 82%, var(--texto));
+}
+
+button.secundario {
+  color: var(--texto);
+  background: var(--campo);
+  border-color: var(--borda);
+}
+
+button.secundario:hover {
+  background: var(--fundo);
+}
+
+button.perigo {
+  color: var(--perigo);
+  background: var(--campo);
+  border-color: var(--borda);
+}
+
+button.perigo:hover {
+  color: var(--sobre-perigo);
+  background: var(--perigo);
+  border-color: var(--perigo);
+}
+
+/* Cadastro rápido de squad/sigla dentro do formulário. */
+button.botao-texto {
+  padding: 2px 0;
+  font-size: 0.85rem;
+  color: var(--destaque);
+  background: none;
+  border: 0;
+}
+
+button.botao-texto:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+.cadastro-rapido {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.cadastro-rapido input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cadastro-rapido button {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Tabela ---------- */
+
+.cabecalho-tabela {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.tabela-rolagem {
+  overflow-x: auto;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+th,
+td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--borda);
+}
+
+th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--texto-suave);
+  background: var(--fundo);
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: var(--linha-hover);
+}
+
+/* Assunto e Descrição: texto livre, pode quebrar linha. */
+td:nth-child(2),
+td:nth-child(3) {
+  min-width: 220px;
+  max-width: 360px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.okrs-celula,
+.texto-celula {
+  min-width: 200px;
+  max-width: 320px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+td a {
+  color: var(--destaque);
+}
+
+td.vazio {
+  padding: 24px;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+.acoes-linha {
+  display: flex;
+  gap: 6px;
+}
+
+.acoes-linha button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+/* ---------- Filtros e exportar/importar (aba de edição) ---------- */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.filtros .campo {
+  width: 170px;
+}
+
+.acoes-dados {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* <label> que abre o seletor de arquivo, com a mesma cara de button.secundario. */
+label.botao {
+  padding: 8px 16px;
+  font-size: inherit;
+  color: var(--texto);
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+label.botao:hover {
+  background: var(--fundo);
+}
+
+/* ---------- Dashboard (aba de exibição) ---------- */
+
+.estado-vazio {
+  margin: 0;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+.indicador-rotulo .legenda-cor {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+/* Com muitas colunas o SVG fica mais largo que o cartão e rola aqui dentro. */
+.grafico-rolagem {
+  overflow-x: auto;
+}
+
+.grafico-svg {
+  display: block;
+}
+
+.grafico-svg text {
+  font-size: 15px;
+  fill: var(--texto-suave);
+}
+
+.grafico-svg .grafico-total {
+  font-size: 18px;
+  font-weight: 700;
+  fill: var(--texto);
+}
+
+.grafico-svg .eixo-grade {
+  stroke: var(--grade);
+}
+
+.grafico-svg .eixo-base {
+  stroke: var(--borda);
+}
+
+.grafico-segmento:hover {
+  opacity: 0.8;
+}
+
+.dica-grafico {
+  position: fixed;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  color: var(--fundo);
+  background: var(--texto);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* Grau de impacto: um único tom de azul, do claro (baixo) ao escuro (alto).
+   O grau também aparece sempre por escrito, nunca só pela cor. */
+.grau-baixo {
+  background: var(--grau-baixo);
+}
+
+.grau-medio {
+  background: var(--grau-medio);
+}
+
+.grau-alto {
+  background: var(--grau-alto);
+}
+
+.grau-indefinido {
+  background: var(--grau-indefinido);
+}
+
+.serie {
+  background: var(--destaque);
+}
+
+.grafico h2 {
+  margin-bottom: 2px;
+}
+
+.grafico > .dica {
+  margin: 0 0 14px;
+}
+
+.barra-linha {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.barra-rotulo {
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
+.barra-trilho {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Reserva espaço para o número ao lado da maior barra. */
+  padding-right: 44px;
+}
+
+.barra {
+  display: flex;
+  gap: 2px;
+  height: 34px;
+}
+
+.barra-parte {
+  min-width: 3px;
+}
+
+.barra-parte:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.barra-valor {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 14px;
+  font-size: 1rem;
+  color: var(--texto-suave);
+}
+
+.legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legenda-cor {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.entregas {
+  display: grid;
+  gap: 16px;
+}
+
+.entregas .vazio {
+  margin: 0;
+  padding: 24px;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+/* Grupo de entregas concluídas no mesmo mês. */
+.entregas-mes {
+  display: grid;
+  gap: 10px;
+}
+
+.entregas-mes h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: 1rem;
+}
+
+.entrega-secao h5 {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--texto-suave);
+}
+
+.entrega-secao p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.entrega-impeditivo {
+  padding: 8px 12px;
+  border-left: 3px solid var(--perigo);
+  background: var(--fundo);
+  border-radius: 6px;
+}
+
+.entrega-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.entrega-links a {
+  padding: 5px 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--destaque);
+  text-decoration: none;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+}
+
+.entrega-links a::after {
+  content: " \2197";
+}
+
+.entrega-links a:hover {
+  border-color: var(--destaque);
+}
+
+.entrega-okrs {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entrega-okrs li {
+  padding: 8px 12px;
+  background: var(--fundo);
+  border-radius: 6px;
+}
+
+.entrega-okrs p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.entrega-okr-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grau {
+  padding: 1px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--sobre-grau-alto);
+  border-radius: 999px;
+}
+
+/* Cada grau tem a sua cor de texto, escolhida para contrastar com o fundo. */
+.grau.grau-baixo {
+  color: var(--sobre-grau-baixo);
+}
+
+.grau.grau-medio {
+  color: var(--sobre-grau-medio);
+}
+
+.grau.grau-indefinido {
+  color: var(--sobre-grau-indefinido);
+}
+
+.detalhes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 20px;
+  margin: 0;
+}
+
+.detalhes dt {
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+}
+
+.detalhes dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detalhes a {
+  color: var(--destaque);
+}
+
+@media (max-width: 760px) {
+  .linha-okr {
+    grid-template-columns: 1fr;
+  }
+
+
+  .grade {
+    grid-template-columns: 1fr;
+  }
+
+  .campo.duplo {
+    grid-column: auto;
+  }
+}
+
+.tema-controles {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.destaques {
+  display: flex;
+  gap: 8px;
+}
+
+.amostra-destaque {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--fundo);
+  border-radius: 50%;
+}
+
+.amostra-destaque:hover {
+  background: var(--destaque);
+}
+
+.amostra-destaque[aria-pressed="true"] {
+  outline: 2px solid var(--texto);
+}
+
+#btn-tema {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Dashboard: filtros e grid de 12 colunas ---------- */
+
+/* Filtros em chips: cada grupo é uma faixa com o chip ativo preenchido. */
+.filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filtro-rotulo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--texto-suave);
+}
+
+.segmentado {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+}
+
+.segmentado .chip {
+  padding: 5px 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--texto-suave);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.segmentado .chip:hover {
+  color: var(--texto);
+  background: var(--campo);
+}
+
+.segmentado .chip[aria-pressed="true"] {
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+}
+
+.filtros-dash-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 38px;
+  margin-left: auto;
+}
+
+.filtros-dash-resumo button {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+
+.grade-12 {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.col-4 {
+  grid-column: span 4;
+}
+
+.col-6 {
+  grid-column: span 6;
+}
+
+.grafico-fatia {
+  stroke: var(--cartao);
+  stroke-width: 2;
+}
+
+.grafico-fatia.inteira {
+  stroke: none;
+}
+
+
+.grafico-svg .grafico-rosca-total {
+  font-size: 54px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  fill: var(--texto);
+}
+
+/* Telas pequenas: 1 coluna. */
+@media (max-width: 640px) {
+  .col-4,
+  .col-6 {
+    grid-column: 1 / -1;
+  }
+
+  .segmentado {
+    border-radius: 14px;
+  }
+
+  .filtros-dash {
+    position: static;
+  }
+
+  .filtros-dash-resumo {
+    margin-left: 0;
+  }
+}
+
+/* ---------- Cabeçalho: foto e nome ---------- */
+
+.perfil {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.perfil-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border: 2px solid var(--destaque);
+  border-radius: 50%;
+}
+
+.perfil-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.topo .perfil-nome {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.perfil-edicao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.perfil-edicao h2,
+.perfil-edicao p {
+  margin: 0;
+}
+
+/* ---------- Entregas em detalhe: grade de cartões ---------- */
+
+.entregas-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px;
+}
+
+.entrega h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.entrega-descricao {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--texto-suave);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.entrega-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Empurra o rodapé para a base: cartões da mesma linha alinham o botão. */
+.entrega-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--borda);
+}
+
+button.link {
+  padding: 4px 0;
+  font-size: 0.875rem;
+  color: var(--destaque);
+  background: none;
+  border: 0;
+}
+
+button.link:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+button.link::after {
+  content: " \2192";
+}
+
+.etiqueta {
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+}
+
+.etiqueta-tipo {
+  color: var(--cor-tipo);
+  border-color: var(--cor-tipo);
+}
+
+.etiqueta-alerta {
+  color: var(--perigo);
+  border-color: var(--perigo);
+}
+
+/* ---------- Modal de detalhes ---------- */
+
+.modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  color: var(--texto);
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
+}
+
+.modal::backdrop {
+  background: rgb(8 10 14 / 0.6);
+  backdrop-filter: blur(3px);
+}
+
+.modal[open] {
+  animation: modal-entrada 0.18s ease-out;
+}
+
+@keyframes modal-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.modal-conteudo {
+  display: grid;
+  gap: 20px;
+  padding: 24px 28px 28px;
+  border-top: 5px solid var(--cor-tipo, var(--destaque));
+}
+
+button.modal-fechar {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--texto-suave);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+}
+
+button.modal-fechar:hover {
+  color: var(--texto);
+  background: var(--campo);
+}
+
+.modal-corpo {
+  display: grid;
+  gap: 18px;
+}
+
+.modal-corpo .entrega-secao p {
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .modal-conteudo {
+    padding: 20px 18px 22px;
+  }
+}
+
+/* =====================================================================
+   Layout em seções (landing page navegável)
+   Trilho lateral fixo + topo compacto + seções numeradas. As regras abaixo
+   valem para o app inteiro; as das seções só existem no dashboard.
+   ===================================================================== */
+
+.icone {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body {
+  padding-left: var(--largura-trilho);
+}
+
+.app {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 28px 64px;
+}
+
+main {
+  display: grid;
+  gap: 20px;
+  padding-top: 12px;
+}
+
+/* ---------- Trilho lateral ---------- */
+
+.trilho {
+  position: fixed;
+  top: 14px;
+  bottom: 14px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: calc(var(--largura-trilho) - 22px);
+  padding: 14px 0;
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 22px;
+}
+
+.trilho-marca {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 14px;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-radius: 50%;
+}
+
+.trilho-marca .icone {
+  stroke-width: 2.4;
+}
+
+.trilho-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trilho-nav a,
+button.trilho-botao {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 1.15rem;
+  color: var(--texto-suave);
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.trilho-rodape {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* Tema: mostra o ícone do tema para o qual o botão troca. */
+/* Interruptor de tema: trilho vertical com lua (escuro, em cima) e sol (claro,
+   embaixo). A bolinha de destaque desliza para o tema ativo. */
+button.tema-alternador {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  place-items: center;
+  width: 44px;
+  height: 84px;
+  padding: 4px 0;
+  font-size: 1.05rem;
+  color: var(--texto-suave);
+  background: var(--campo);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+}
+
+button.tema-alternador:hover {
+  color: var(--texto);
+  background: var(--campo);
+}
+
+button.tema-alternador::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  background: var(--destaque);
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root[data-theme="light"] button.tema-alternador::before {
+  transform: translateY(40px);
+}
+
+button.tema-alternador .icone {
+  position: relative;
+  transition: color 0.25s;
+}
+
+:root[data-theme="dark"] button.tema-alternador .icone-lua,
+:root[data-theme="light"] button.tema-alternador .icone-sol {
+  color: var(--sobre-destaque);
+}
+
+button.tema-alternador:hover .trilho-rotulo,
+button.tema-alternador:focus-visible .trilho-rotulo {
+  opacity: 1;
+  transform: none;
+}
+
+.trilho-nav a:hover,
+button.trilho-botao:hover {
+  color: var(--texto);
+  background: var(--campo);
+}
+
+/* Fora do dashboard nenhuma seção está "ativa". */
+.trilho-nav a.ativa,
+button.trilho-botao.ativa {
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+}
+
+body[data-aba="edicao"] .trilho-nav a.ativa {
+  color: var(--texto-suave);
+  background: transparent;
+}
+
+/* Rótulo flutuante ao passar o mouse ou focar pelo teclado. */
+.trilho-rotulo {
+  position: absolute;
+  left: calc(100% + 14px);
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--fundo);
+  background: var(--texto);
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.trilho-nav a:hover .trilho-rotulo,
+.trilho-nav a:focus-visible .trilho-rotulo,
+button.trilho-botao:hover .trilho-rotulo,
+button.trilho-botao:focus-visible .trilho-rotulo {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Topo ---------- */
+
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 20px 0 8px;
+}
+
+.perfil {
+  gap: 12px;
+}
+
+.perfil-avatar {
+  width: 46px;
+  height: 46px;
+  font-size: 1rem;
+}
+
+.topo h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.topo .perfil-nome {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--texto-suave);
+}
+
+.abas {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px;
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+}
+
+button.aba {
+  padding: 7px 16px;
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+}
+
+button.aba:hover {
+  color: var(--texto);
+  background: var(--campo);
+}
+
+button.aba.ativa {
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+}
+
+#btn-bloquear {
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  border-radius: 999px;
+}
+
+#btn-tema {
+  border-radius: 999px;
+}
+
+/* ---------- Cartões ---------- */
+
+.cartao {
+  background: linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border-radius: var(--raio);
+}
+
+.cartao h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* ---------- Filtros (barra flutuante fixa) ---------- */
+
+.filtros-dash {
+  position: sticky;
+  top: 12px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 18px;
+  padding: 12px 18px;
+  background: color-mix(in srgb, var(--cartao) 80%, transparent);
+  border: 1px solid var(--borda);
+  border-radius: 22px;
+  box-shadow: var(--sombra);
+  backdrop-filter: blur(14px);
+}
+
+/* ---------- Seções ---------- */
+
+.secoes {
+  display: grid;
+  gap: 72px;
+  /* Sem isso a trilha de tipos (rolagem lateral no celular) alarga a página. */
+  min-width: 0;
+}
+
+/* Filhos de grid não encolhem abaixo do conteúdo por padrão: libera para
+   que trilhas com rolagem lateral (tipos, gráficos) não alarguem a página. */
+.painel > *,
+.secao > * {
+  min-width: 0;
+}
+
+.secao {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  /* Rola para baixo da barra de filtros fixa. */
+  scroll-margin-top: 140px;
+}
+
+.secao-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding-top: 28px;
+  border-top: 1px solid var(--borda);
+}
+
+.secao-numero {
+  margin-top: 8px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--destaque);
+  border: 1px solid var(--destaque);
+  border-radius: 999px;
+}
+
+.secao-cabecalho h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.secao-cabecalho p {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  min-height: min(calc(100vh - 190px), 820px);
+  padding: 44px 44px 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(700px 420px at 78% 32%, color-mix(in srgb, var(--destaque) 13%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-radius: 28px;
+  scroll-margin-top: 140px;
+}
+
+/* Linhas verticais decorativas, como guias de uma landing page. */
+.hero-linhas {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16%;
+  padding-right: 9%;
+  pointer-events: none;
+}
+
+.hero-linhas span {
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--borda) 20%, var(--borda) 80%, transparent);
+}
+
+.hero-topo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 32px;
+}
+
+.hero-sobretitulo {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texto-suave);
+}
+
+.hero-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.25em;
+  margin: 10px 0 8px;
+  font-size: clamp(2rem, 4.5vw, 3.6rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--texto-suave);
+}
+
+.hero-titulo strong {
+  font-size: clamp(5rem, 12vw, 9.5rem);
+  font-weight: 800;
+  line-height: 0.9;
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-resumo {
+  max-width: 52ch;
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--texto-suave);
+}
+
+/* Barra de composição: um segmento por tipo, separados por respiro. */
+.hero-composicao {
+  display: flex;
+  gap: 6px;
+  height: 10px;
+  margin: 26px 0 20px;
+}
+
+.hero-composicao span {
+  min-width: 8px;
+  border-radius: 999px;
+  transition: opacity 0.2s;
+}
+
+.hero-composicao .apagada {
+  opacity: 0.2;
+}
+
+.hero-minis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hero-mini {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--fundo) 45%, transparent);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+}
+
+.hero-mini-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+.hero-mini-rotulo .icone {
+  color: var(--destaque);
+}
+
+.hero-mini strong {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.hero-visual {
+  display: grid;
+  place-items: center;
+}
+
+/* Rosca com anéis pulsando em volta: o "ponto vivo" do hero. */
+.hero-orbita {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(360px, 100%);
+  aspect-ratio: 1;
+}
+
+.hero-orbita::before,
+.hero-orbita::after {
+  content: "";
+  position: absolute;
+  inset: -4%;
+  border: 1px solid color-mix(in srgb, var(--destaque) 40%, transparent);
+  border-radius: 50%;
+  animation: pulso 3.6s ease-out infinite;
+}
+
+.hero-orbita::after {
+  animation-delay: 1.8s;
+}
+
+@keyframes pulso {
+  from {
+    opacity: 0.9;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+.hero-orbita .grafico-rosca {
+  position: relative;
+  width: 100%;
+}
+
+.grafico-fatia {
+  transition: opacity 0.2s;
+}
+
+.grafico-svg .grafico-rosca-total.compacto {
+  font-size: 40px;
+}
+
+.grafico-fatia.apagada {
+  opacity: 0.16;
+}
+
+/* ---------- Cartões de tipo (filtro) ---------- */
+
+.tipos-trilha {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 14px;
+  margin-top: 40px;
+  overflow-x: auto;
+  padding: 6px 2px;
+}
+
+button.tipo-cartao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 200px;
+  padding: 18px;
+  font-weight: inherit;
+  text-align: left;
+  color: var(--texto);
+  background: color-mix(in srgb, var(--cartao) 55%, transparent);
+  border: 1px solid var(--borda);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
+}
+
+button.tipo-cartao:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cartao-alto) 80%, transparent);
+  border-color: var(--cor-tipo);
+  transform: translateY(-4px);
+}
+
+/* Ativo: cartão claro em destaque, como o item selecionado de um carrossel. */
+/* Ativo: tingido pela cor do tipo, com borda e brilho nela (sem fundo claro). */
+button.tipo-cartao[aria-pressed="true"],
+button.tipo-cartao[aria-pressed="true"]:hover {
+  color: var(--texto);
+  background:
+    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--cor-tipo) 28%, transparent), transparent 70%),
+    color-mix(in srgb, var(--cor-tipo) 10%, var(--cartao));
+  border-color: var(--cor-tipo);
+  box-shadow:
+    0 0 0 1px var(--cor-tipo),
+    0 18px 44px color-mix(in srgb, var(--cor-tipo) 28%, transparent);
+  transform: translateY(-6px);
+}
+
+button.tipo-cartao:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.tipo-icone {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  width: 100%;
+  min-height: 96px;
+}
+
+.tipo-icone .icone {
+  width: 64px;
+  height: 64px;
+  stroke: var(--cor-tipo);
+  stroke-width: 1.4;
+  filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--cor-tipo) 45%, transparent));
+}
+
+.tipo-seta {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  padding: 8px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+button.tipo-cartao:hover .tipo-seta,
+button.tipo-cartao[aria-pressed="true"] .tipo-seta {
+  opacity: 1;
+}
+
+.tipo-nome {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.tipo-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.tipo-ponto {
+  width: 8px;
+  height: 8px;
+  background: var(--cor-tipo);
+  border-radius: 50%;
+}
+
+button.hero-explorar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px auto 0;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  color: var(--texto);
+  background: transparent;
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+}
+
+button.hero-explorar:hover {
+  background: var(--campo);
+}
+
+button.hero-explorar .icone {
+  animation: quique 1.8s ease-in-out infinite;
+}
+
+@keyframes quique {
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* ---------- Indicadores ---------- */
+
+.faixa-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.indicador {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px;
+  background: linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.indicador-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+}
+
+.indicador-rotulo .icone {
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  color: var(--destaque);
+  background: var(--campo);
+  border-radius: 10px;
+}
+
+.indicador-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.indicador-valor {
+  display: flex;
+  align-items: baseline;
+  gap: 0.15em;
+  font-size: clamp(2.6rem, 22cqi, 4.4rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.indicador-unidade {
+  font-size: 0.32em;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--texto-suave);
+}
+
+.medidor-anel {
+  flex: none;
+  width: clamp(64px, 24cqi, 92px);
+  height: auto;
+}
+
+.medidor-trilho,
+.medidor-arco {
+  fill: none;
+  stroke-width: 8;
+}
+
+.medidor-trilho {
+  stroke: var(--grade);
+}
+
+.medidor-arco {
+  stroke-linecap: round;
+}
+
+.medidor-texto {
+  font-size: 17px;
+  font-weight: 700;
+  fill: var(--texto);
+}
+
+/* ---------- Gráficos e entregas no novo layout ---------- */
+
+.col-12 {
+  grid-column: 1 / -1;
+}
+
+
+.entregas-mes h3 {
+  font-size: 1.05rem;
+}
+
+.etiqueta {
+  background: var(--campo);
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 1100px) {
+  .hero-topo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-orbita {
+    width: min(280px, 100%);
+  }
+
+  .faixa-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .col-4,
+  .col-6 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Celular: o trilho vira uma barra inferior e os cartões de tipo rolam de lado. */
+@media (max-width: 760px) {
+  body {
+    padding-left: 0;
+  }
+
+  .app {
+    padding: 0 16px 104px;
+  }
+
+  .trilho {
+    top: auto;
+    right: 12px;
+    flex-direction: row;
+    justify-content: space-around;
+    width: auto;
+    padding: 8px;
+  }
+
+  .trilho-marca,
+  .trilho-rotulo {
+    display: none;
+  }
+
+  .trilho-nav {
+    flex-direction: row;
+  }
+
+  .trilho-rodape {
+    flex-direction: row;
+    margin-top: 0;
+  }
+
+  /* Na barra inferior o interruptor fica deitado: lua à esquerda, sol à direita. */
+  button.tema-alternador {
+    grid-template-rows: none;
+    grid-template-columns: 1fr 1fr;
+    width: 84px;
+    height: 44px;
+    padding: 0 4px;
+  }
+
+  button.tema-alternador::before {
+    top: 50%;
+    left: 4px;
+    margin: -17px 0 0;
+  }
+
+  :root[data-theme="light"] button.tema-alternador::before {
+    transform: translateX(40px);
+  }
+
+  .abas {
+    margin-left: 0;
+  }
+
+  .hero {
+    padding: 26px 18px 20px;
+  }
+
+  .hero-minis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tipos-trilha {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 160px;
+  }
+
+  .secoes {
+    gap: 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  .faixa-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-orbita::before,
+  .hero-orbita::after,
+  button.hero-explorar .icone {
+    animation: none;
+  }
+}
+
+/* ---------- Filtro hierárquico: Ano › Release › Sprint ---------- */
+
+.filtro-seta {
+  align-self: flex-end;
+  padding-bottom: 8px;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--texto-suave);
+}
+
+.filtro-dica {
+  margin-left: 4px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.8;
+}
+
+/* Meses da release, pequenos dentro do chip: "R2 abr–jun". */
+.chip-detalhe {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.segmentado.desabilitado {
+  opacity: 0.45;
+}
+
+.segmentado .chip:disabled {
+  cursor: not-allowed;
+}
+
+.segmentado .chip:disabled:hover {
+  color: var(--texto-suave);
+  background: transparent;
+}
+
+#dash-release-atual {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+}
+
+/* ---------- Busca de entregas ---------- */
+
+.busca-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.busca-campo {
+  display: flex;
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-weight: 400;
+  color: var(--texto-suave);
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.busca-campo:focus-within {
+  border-color: var(--destaque);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destaque) 20%, transparent);
+}
+
+.busca-campo input[type="search"] {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  font-size: 0.95rem;
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.busca-campo kbd {
+  padding: 1px 7px;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: var(--texto-suave);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+}
+
+.busca-campo:focus-within kbd {
+  display: none;
+}
+
+/* ---------- Cartões de entrega com capa por tipo ---------- */
+
+.entregas-grade {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 28px 20px;
+}
+
+/* --cor-tipo vem de CORES_TIPO, via dashboard.ts. Sem moldura: capa + texto,
+   como os cartões de um portfólio. */
+.entrega {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  transition: transform 0.2s;
+}
+
+.entrega:hover {
+  transform: translateY(-4px);
+}
+
+.entrega-capa {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  overflow: hidden;
+  color: var(--texto);
+  background:
+    radial-gradient(circle at 50% 115%, color-mix(in srgb, var(--cor-tipo) 50%, transparent), transparent 60%),
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--cor-tipo) 22%, transparent), transparent 45%),
+    linear-gradient(160deg, var(--cartao-alto), var(--fundo));
+  border: 1px solid var(--borda);
+  border-radius: 20px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Mantém o fundo no hover (o button:hover global trocaria pela cor de destaque). */
+.entrega:hover button.entrega-capa,
+button.okr-cartao:hover:not(:disabled) .entrega-capa,
+button.okr-cartao[aria-pressed="true"] .entrega-capa {
+  background:
+    radial-gradient(circle at 50% 115%, color-mix(in srgb, var(--cor-tipo) 50%, transparent), transparent 60%),
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--cor-tipo) 22%, transparent), transparent 45%),
+    linear-gradient(160deg, var(--cartao-alto), var(--fundo));
+  border-color: var(--cor-tipo);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--cor-tipo) 22%, transparent);
+}
+
+/* Textura de fundo, diferente por tipo, esmaecendo nas bordas. */
+.entrega-capa::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+  mask-image: radial-gradient(ellipse at 50% 55%, #000 25%, transparent 75%);
+}
+
+.capa-task::before {
+  background-image:
+    linear-gradient(var(--borda) 1px, transparent 1px),
+    linear-gradient(90deg, var(--borda) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+.capa-historia::before {
+  background-image: repeating-linear-gradient(0deg, var(--borda) 0 1px, transparent 1px 20px);
+}
+
+.capa-bug::before {
+  background-image: radial-gradient(circle, var(--borda) 1.6px, transparent 2px);
+  background-size: 16px 16px;
+}
+
+.capa-oportunidade::before {
+  background-image: repeating-conic-gradient(
+    from 0deg at 50% 58%,
+    color-mix(in srgb, var(--cor-tipo) 16%, transparent) 0 5deg,
+    transparent 5deg 15deg
+  );
+}
+
+.capa-discovery::before {
+  background-image: repeating-radial-gradient(circle at 50% 55%, transparent 0 20px, var(--borda) 20px 21px);
+}
+
+/* "Pedestal" com brilho sob o ícone, para dar volume de ilustração. */
+.entrega-capa::after {
+  content: "";
+  position: absolute;
+  bottom: 16%;
+  width: 34%;
+  height: 9%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--cor-tipo) 55%, transparent), transparent);
+  border-radius: 50%;
+  filter: blur(3px);
+}
+
+.capa-icone {
+  position: relative;
+  z-index: 1;
+  width: 34%;
+  max-width: 116px;
+  height: auto;
+  margin-bottom: 6%;
+  stroke: var(--cor-tipo);
+  stroke-width: 1.2;
+  filter: drop-shadow(0 12px 28px color-mix(in srgb, var(--cor-tipo) 60%, transparent));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.entrega:hover .capa-icone,
+button.okr-cartao:hover:not(:disabled) .capa-icone {
+  transform: translateY(-4px) scale(1.08) rotate(-4deg);
+}
+
+.entrega-capa .etiqueta-tipo,
+.capa-data,
+.capa-alerta {
+  position: absolute;
+  z-index: 1;
+}
+
+.entrega-capa .etiqueta-tipo {
+  top: 12px;
+  left: 12px;
+  background: color-mix(in srgb, var(--fundo) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.capa-data {
+  top: 12px;
+  right: 12px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--fundo) 70%, transparent);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+
+.capa-alerta {
+  bottom: 12px;
+  left: 12px;
+  background: color-mix(in srgb, var(--fundo) 80%, transparent);
+}
+
+.entrega-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.entrega-info h4 {
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.entrega-descricao {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+@media (max-width: 760px) {
+  .filtro-seta {
+    display: none;
+  }
+}
+
+/* ---------- Big numbers de volume ---------- */
+
+.faixa-numeros {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.faixa-numeros .indicador-valor {
+  font-size: clamp(2.4rem, 26cqi, 4rem);
+}
+
+@media (max-width: 1300px) {
+  .faixa-numeros {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .faixa-numeros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .faixa-numeros {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Rosca interativa (hover/clique) ---------- */
+
+.grafico-fatia {
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s, filter 0.2s;
+}
+
+.grafico-fatia.clicavel {
+  cursor: pointer;
+}
+
+/* A fatia em foco "salta" para fora (--dx/--dy vêm de graficos.ts) e brilha;
+   as demais esmaecem. Vale também para a fatia acesa pelo filtro de tipo. */
+.grafico-fatia.realcada {
+  opacity: 1;
+  transform: translate(var(--dx), var(--dy));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor 35%, transparent)) brightness(1.12);
+}
+
+.grafico-rosca.em-foco .grafico-fatia:not(.realcada) {
+  opacity: 0.3;
+}
+
+/* O "salto" precisa de espaço: o SVG não corta o que sai do viewBox. */
+.hero-orbita .grafico-rosca {
+  overflow: visible;
+}
+
+.hero-visual {
+  gap: 10px;
+}
+
+.hero-orbita-dica {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+}
+
+/* ---------- Cartões de tipo: affordance de clique ---------- */
+
+.tipos-cabecalho {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.tipos-cabecalho > div {
+  display: grid;
+  gap: 2px;
+}
+
+.tipos-cabecalho strong {
+  font-size: 1rem;
+}
+
+.tipos-cabecalho .icone {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-radius: 12px;
+}
+
+.tipos-trilha {
+  margin-top: 14px;
+}
+
+button.tipo-cartao {
+  cursor: pointer;
+}
+
+/* Seta sempre visível (discreta) para sinalizar que o cartão leva a algum lugar. */
+.tipo-seta {
+  opacity: 0.45;
+}
+
+.tipo-acao {
+  margin-top: 8px;
+  padding-top: 8px;
+  width: 100%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--destaque);
+  border-top: 1px dashed var(--borda);
+}
+
+button.tipo-cartao[aria-pressed="true"] .tipo-acao {
+  color: var(--cor-tipo);
+  border-top-color: color-mix(in srgb, var(--cor-tipo) 40%, transparent);
+}
+
+button.tipo-cartao[aria-pressed="true"] .tipo-seta {
+  color: var(--cor-tipo);
+}
+
+button.tipo-cartao:disabled .tipo-acao {
+  visibility: hidden;
+}
+
+/* ---------- Ritmo de entregas (linhas suaves) ---------- */
+
+.ritmo-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-bottom: 8px;
+}
+
+.ritmo-cabecalho h2 {
+  margin-bottom: 2px;
+}
+
+.ritmo-cabecalho .dica {
+  margin: 0;
+}
+
+/* Abas só de texto, com sublinhado na ativa (como "Daily · Weekly · Monthly"). */
+.abas-texto {
+  display: flex;
+  gap: 20px;
+}
+
+button.aba-texto {
+  padding: 4px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--texto-suave);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+button.aba-texto:hover {
+  color: var(--texto);
+  background: none;
+}
+
+button.aba-texto[aria-pressed="true"] {
+  color: var(--serie-a);
+  border-bottom-color: var(--serie-a);
+}
+
+.linhas-traco {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.linhas-ponto {
+  stroke: var(--cartao);
+  stroke-width: 2;
+  transition: r 0.15s;
+}
+
+.linhas-ponto.ativo {
+  r: 7;
+}
+
+.linhas-guia {
+  stroke: var(--texto-suave);
+  stroke-dasharray: 4 4;
+}
+
+.linhas-faixa {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+/* ---------- Impacto nos OKRs ---------- */
+
+.okr-painel {
+  display: grid;
+  gap: 20px;
+}
+
+.okr-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+
+/* Mesmo desenho dos cartões de tipo/entrega: moldura, capa ilustrada e dados
+   abaixo. --cor-tipo vem de CORES_OKR (dashboard.ts). */
+button.okr-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 12px 18px;
+  font-weight: inherit;
+  text-align: left;
+  color: var(--texto);
+  background: linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-radius: 22px;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+button.okr-cartao:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border-color: var(--cor-tipo);
+  transform: translateY(-4px);
+}
+
+/* Selecionado: tingido pela cor do OKR, como o cartão de tipo ativo. */
+button.okr-cartao[aria-pressed="true"],
+button.okr-cartao[aria-pressed="true"]:hover {
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cor-tipo) 18%, transparent), transparent 60%),
+    color-mix(in srgb, var(--cor-tipo) 6%, var(--cartao));
+  border-color: var(--cor-tipo);
+  box-shadow:
+    0 0 0 1px var(--cor-tipo),
+    0 18px 44px color-mix(in srgb, var(--cor-tipo) 24%, transparent);
+}
+
+button.okr-cartao:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.capa-okr {
+  aspect-ratio: 16 / 9;
+}
+
+/* Textura do OKR: anéis de alvo em volta do ícone. */
+.capa-okr::before {
+  background-image:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 18px, color-mix(in srgb, var(--cor-tipo) 22%, transparent) 18px 19px);
+}
+
+.capa-okr .tipo-seta {
+  z-index: 1;
+  color: var(--texto);
+  background: color-mix(in srgb, var(--fundo) 60%, transparent);
+  opacity: 0.8;
+}
+
+button.okr-cartao[aria-pressed="true"] .tipo-seta,
+button.okr-cartao:hover .tipo-seta {
+  color: var(--cor-tipo);
+  opacity: 1;
+}
+
+.okr-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 8px;
+}
+
+.okr-nome {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+button.okr-cartao .tipo-acao {
+  margin-top: 0;
+  color: var(--cor-tipo);
+}
+
+.okr-numero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.okr-numero strong {
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.okr-barra {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  overflow: hidden;
+  background: var(--grade);
+  border-radius: 999px;
+}
+
+.okr-barra span {
+  min-width: 6px;
+}
+
+.okr-graus {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+/* Cada linha de grau ocupa as 3 colunas do grid acima. */
+.okr-grau-linha {
+  display: contents;
+}
+
+.okr-grau-linha .grau {
+  justify-self: start;
+}
+
+.okr-grau-linha strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.intensidade {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  font-size: 0.85rem;
+  color: var(--texto-suave);
+  border-top: 1px dashed var(--borda);
+}
+
+.intensidade-barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.intensidade-barras span {
+  width: 6px;
+  background: var(--grade);
+  border-radius: 2px;
+}
+
+.intensidade-barras span:nth-child(1) {
+  height: 8px;
+}
+
+.intensidade-barras span:nth-child(2) {
+  height: 13px;
+}
+
+.intensidade-barras span:nth-child(3) {
+  height: 18px;
+}
+
+.intensidade-barras .acesa {
+  background: var(--destaque);
+}
+
+.okr-detalhe {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px;
+  background: linear-gradient(180deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  scroll-margin-top: 140px;
+}
+
+.okr-detalhe-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.okr-detalhe-cabecalho h3 {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+}
+
+.okr-detalhe-cabecalho .dica {
+  margin: 0;
+}
+
+.okr-lista {
+  display: grid;
+  gap: 10px;
+}
+
+/* Uma entrega por linha: grau grande à esquerda, conteúdo e motivo à direita. */
+button.okr-linha {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  font-weight: inherit;
+  text-align: left;
+  color: var(--texto);
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--cor-tipo);
+  border-radius: 14px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+button.okr-linha:hover {
+  background: var(--fundo);
+  border-color: var(--cor-tipo);
+  transform: translateX(3px);
+}
+
+.okr-linha-grau {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+
+.okr-linha-grau .grau {
+  padding: 4px 12px;
+  font-size: 0.9rem;
+}
+
+.okr-linha-corpo {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.okr-linha-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.okr-linha-assunto {
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.okr-linha-motivo {
+  margin: 0;
+  color: var(--texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.okr-linha-motivo strong {
+  color: var(--texto);
+}
+
+.okr-linha-seta {
+  color: var(--texto-suave);
+}
+
+button.okr-linha:hover .okr-linha-seta {
+  color: var(--cor-tipo);
+}
+
+@media (max-width: 640px) {
+  button.okr-linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .okr-linha-seta {
+    display: none;
+  }
+}
+
+/* ---------- Lista do detalhe do OKR: "Exibir mais" ---------- */
+
+.okr-lista-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.okr-lista-rodape button {
+  border-radius: 999px;
+}
+
+/* ---------- Modal no visual da seção de abertura ---------- */
+
+.modal {
+  width: min(980px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 28px;
+}
+
+.modal-conteudo {
+  position: relative;
+  display: grid;
+  gap: 28px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 40px 44px 36px;
+  background:
+    radial-gradient(640px 360px at 82% 18%, color-mix(in srgb, var(--cor-tipo) 16%, transparent), transparent 70%),
+    linear-gradient(160deg, var(--cartao-alto), var(--cartao));
+  border: 1px solid var(--borda);
+  border-top: 1px solid var(--borda);
+  border-radius: 28px;
+}
+
+.modal-conteudo > .hero-linhas {
+  gap: 22%;
+  padding-right: 14%;
+}
+
+button.modal-fechar {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  background: color-mix(in srgb, var(--fundo) 50%, transparent);
+  border: 1px solid var(--borda);
+}
+
+.modal-hero-topo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  align-items: center;
+  gap: 32px;
+}
+
+.modal-hero-texto {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-titulo {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.modal-minis {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 10px;
+}
+
+.modal-minis strong {
+  font-size: 1.05rem;
+}
+
+/* Visual do tipo com anéis pulsando, como a rosca do hero. */
+.modal-orbita {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cor-tipo) 22%, transparent), transparent 65%);
+  border: 1px solid color-mix(in srgb, var(--cor-tipo) 35%, transparent);
+  border-radius: 50%;
+}
+
+.modal-orbita::before,
+.modal-orbita::after {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  border: 1px solid color-mix(in srgb, var(--cor-tipo) 45%, transparent);
+  border-radius: 50%;
+  animation: pulso 3.6s ease-out infinite;
+}
+
+.modal-orbita::after {
+  animation-delay: 1.8s;
+}
+
+.modal-orbita-icone {
+  width: 42%;
+  height: auto;
+  stroke: var(--cor-tipo);
+  stroke-width: 1.3;
+  filter: drop-shadow(0 10px 26px color-mix(in srgb, var(--cor-tipo) 60%, transparent));
+}
+
+.modal-corpo {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Cada bloco do corpo vira um mini cartão translúcido, como os do hero. */
+.modal-corpo .entrega-secao {
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--fundo) 45%, transparent);
+  border: 1px solid var(--borda);
+  border-radius: 18px;
+}
+
+/* OKRs ocupam a largura toda: é o bloco mais importante. */
+.modal-corpo .entrega-secao:first-child {
+  grid-column: 1 / -1;
+}
+
+.modal-corpo .entrega-okrs li {
+  background: color-mix(in srgb, var(--cartao) 70%, transparent);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-orbita::before,
+  .modal-orbita::after {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .modal-conteudo {
+    padding: 28px 20px 24px;
+  }
+
+  .modal-hero-topo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .modal-orbita {
+    display: none;
+  }
+
+  .modal-corpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- Versão publicada (só leitura) ---------- */
+
+body[data-publicado] #aba-edicao,
+body[data-publicado] #trilho-edicao,
+body[data-publicado] #btn-bloquear {
+  display: none;
+}
