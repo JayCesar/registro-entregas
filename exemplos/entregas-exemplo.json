@@ -1,0 +1,59 @@
+[
+  {
+    "id": "2026-r4-s1-01",
+    "tipo": "História",
+    "assunto": "Agendamento de transferências",
+    "descricao": "Cliente pode agendar transferências para até 60 dias, com cancelamento.",
+    "squad": "Squad Alfa",
+    "siglas": ["FT5"],
+    "dataInicio": "2026-10-01",
+    "dataFim": "2026-10-16",
+    "release": "4",
+    "sprint": "1",
+    "okrs": [
+      { "okr": "A", "grau": "Alto", "motivo": "Funcionalidade mais pedida na pesquisa de satisfação" },
+      { "okr": "B", "grau": "Médio", "motivo": "Aumenta o volume transacionado pelo app" }
+    ],
+    "impeditivo": "",
+    "historia": { "funcional": true, "bcp": "BCP-1077", "complexidade": 8 },
+    "gmud": { "nome": "GMUD-49388", "link": "https://gmud.exemplo.com.br/49388" },
+    "git": {
+      "linkPullRequest": "https://github.com/exemplo/transferencias-api/pull/419",
+      "linkActions": "https://github.com/exemplo/transferencias-api/actions/runs/7933445566"
+    }
+  },
+  {
+    "id": "2026-r4-s1-02",
+    "tipo": "Bug",
+    "assunto": "Timeout na emissão de boleto",
+    "descricao": "Ajuste do timeout e retry com backoff na integração com o emissor.",
+    "squad": "Squad Beta",
+    "siglas": ["JQ9"],
+    "dataInicio": "2026-10-06",
+    "dataFim": "2026-10-09",
+    "release": "4",
+    "sprint": "1",
+    "okrs": [
+      { "okr": "B", "grau": "Médio", "motivo": "Diminui falhas na jornada de pagamento" }
+    ],
+    "impeditivo": "Ambiente de homologação indisponível por 2 dias.",
+    "historia": null,
+    "gmud": { "nome": "GMUD-48390", "link": null },
+    "git": { "linkPullRequest": "https://github.com/exemplo/boleto-service/pull/88", "linkActions": null }
+  },
+  {
+    "id": "2026-r4-s2-01",
+    "tipo": "Discovery",
+    "assunto": "Mapeamento da jornada de onboarding PJ",
+    "descricao": "Entrevistas com 8 clientes e mapa de dores do cadastro de empresas.",
+    "squad": "Squad Gama",
+    "siglas": [],
+    "dataInicio": "2026-10-13",
+    "dataFim": "2026-10-24",
+    "release": "4",
+    "sprint": "2",
+    "okrs": [
+      { "okr": "A", "grau": "Baixo", "motivo": "Direciona o backlog de onboarding do próximo ciclo" }
+    ]
+  }
+]

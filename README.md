@@ -63,10 +63,28 @@ planilha CSV  ──►  site local: Importar CSV  ──►  Exportar JSON  ─
 
 Quer conferir antes de subir? Rode sem `--bucket` (`npm run publicar`) e abra `publicar/index.html` no navegador.
 
-**Cuidados com os dados:**
+### Por que publicar pelo JSON e não direto pelo CSV
 
-- **Os dados acumulados ficam no navegador** (localStorage) do PC onde você importa. Se o cache do navegador for limpo, ou se você trocar de PC ou de navegador, eles somem dali. Para recuperar, use **Importar JSON** com o último arquivo exportado. Por isso o passo 3 é toda semana.
-- **Não importe a mesma linha duas vezes.** Use um CSV novo por semana, só com as entregas novas. Se preferir manter uma planilha única e reimportar tudo, **preencha a coluna `id`**: aí reimportar atualiza a entrega em vez de duplicar.
+As entregas se **acumulam no site** a cada importação semanal. O CSV de uma semana tem só as entregas daquela semana. Publicar a partir dele faria a página dos gestores mostrar só aquela semana.
+
+O **Exportar JSON** gera um arquivo com **tudo** o que já foi importado. Por isso ele é a fonte da publicação, e serve também de backup.
+
+Ordem que o `npm run publicar` usa para achar os dados:
+
+1. o arquivo passado em `--json` (ou em `--csv`);
+2. senão, o `registro-entregas-*.json` mais recente em `dados/`;
+3. senão, `dados/entregas.csv`.
+
+> Atenção: se não houver nenhum JSON em `dados/`, o script cai no passo 3. Mantenha o JSON da semana em `dados/` (ou passe `--json`) para não publicar uma planilha antiga.
+
+### Cuidados com os dados
+
+- **Os dados acumulados ficam no navegador** (localStorage) do PC onde você importa. Se o cache do navegador for limpo, ou se você trocar de PC ou de navegador, eles somem dali.
+  - Para recuperar, abra o site, vá na aba **Edição**, clique em **Importar JSON** e escolha o último arquivo exportado.
+  - É por isso que o passo 3 (Exportar JSON) é feito toda semana.
+- **Não importe a mesma linha duas vezes.**
+  - Use um CSV novo por semana, só com as entregas novas.
+  - Se preferir manter uma planilha única e reimportar tudo, **preencha a coluna `id`**: aí reimportar atualiza a entrega em vez de duplicar. Vale o mesmo para o JSON.
 
 Opções do `npm run publicar`:
 
@@ -119,6 +137,58 @@ Os OKRs, a senha da aba de edição e as listas iniciais de squads e siglas fica
 
 ---
 
+## 3.1 Formato do JSON (alternativa ao CSV)
+
+O **Importar JSON** aceita o arquivo do **Exportar JSON** (backup) e também um JSON escrito à mão. Um exemplo pronto para importar, com uma história completa, um bug com impeditivo e uma discovery só com os campos obrigatórios, está em [`exemplos/entregas-exemplo.json`](exemplos/entregas-exemplo.json).
+
+O arquivo é uma **lista** `[ ... ]` com um objeto por entrega:
+
+```json
+[
+  {
+    "id": "2026-r4-s1-01",
+    "tipo": "História",
+    "assunto": "Agendamento de transferências",
+    "descricao": "Cliente pode agendar transferências para até 60 dias.",
+    "squad": "Squad Alfa",
+    "siglas": ["FT5"],
+    "dataInicio": "2026-10-01",
+    "dataFim": "2026-10-16",
+    "release": "4",
+    "sprint": "1",
+    "okrs": [
+      { "okr": "A", "grau": "Alto", "motivo": "Funcionalidade mais pedida pelos clientes" }
+    ],
+    "impeditivo": "",
+    "historia": { "funcional": true, "bcp": "BCP-1077", "complexidade": 8 },
+    "gmud": { "nome": "GMUD-49388", "link": "https://gmud.exemplo.com.br/49388" },
+    "git": { "linkPullRequest": "https://github.com/.../pull/419", "linkActions": null }
+  }
+]
+```
+
+| Campo | Obrigatório | Formato |
+|---|---|---|
+| `id` | **sim** | texto único no arquivo. Uma entrega com o mesmo `id` de uma já existente **a substitui** |
+| `tipo` | **sim** | `"História"`, `"Bug"`, `"Task"`, `"Oportunidade"` ou `"Discovery"` (com acento, exatamente assim) |
+| `assunto`, `descricao` | **sim** | texto |
+| `squad` | **sim** | texto; squad nova é aceita |
+| `siglas` | **sim** | lista de textos; `[]` se não houver |
+| `dataInicio`, `dataFim` | **sim** | `"aaaa-mm-dd"`; o fim não pode ser antes do início |
+| `release`, `sprint` | não | `"1"` a `"4"` **como texto** (entre aspas) |
+| `okrs` | não | lista de `{ "okr": "A", "grau": "Alto", "motivo": "..." }`; `okr` em `A`, `B`, `C` e `grau` em `Baixo`, `Médio`, `Alto` |
+| `impeditivo` | não | texto; `""` ou ausente = não houve |
+| `historia` | não | só para História: `{ "funcional": true, "bcp": "...", "complexidade": 5 }` ou `{ "funcional": false }` |
+| `gmud` | não | `{ "nome": "GMUD-123", "link": "https://..." }` (`link` pode ser `null`) |
+| `git` | não | `{ "linkPullRequest": "https://...", "linkActions": "https://..." }`; `null` ou ausente = sem alteração em Git |
+
+Diferenças em relação ao CSV:
+
+- **Valores exatos:** no JSON os valores de lista precisam estar exatamente como na tabela (`"História"`, não `"historia"`), e as datas só no formato `aaaa-mm-dd`.
+- **Mesma importação "tudo ou nada":** se algo estiver errado, nada entra e aparece a lista dos problemas, com o número da entrega e o motivo.
+
+---
+
 ## 4. Hospedagem no S3 com link de 1 hora
 
 **Dá para fazer assim, sim.** O caminho certo é um **link pré-assinado** (*presigned URL*), sem deixar o bucket público:
@@ -149,7 +219,7 @@ favicon.svg           ícone da aba
 src/*.ts              código-fonte (TypeScript, scripts clássicos sem módulos)
 dist/*.js             código compilado (versionado para abrir sem instalar nada)
 dados/                modelo do CSV; seus CSVs e JSONs exportados ficam aqui e não vão para o Git
-exemplos/             CSV de exemplo preenchido
+exemplos/             CSV e JSON de exemplo, prontos para importar
 scripts/publicar.mjs  gera a página única e, opcionalmente, sobe para o S3
 ```
 

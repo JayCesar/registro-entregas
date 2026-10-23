@@ -10,6 +10,9 @@ function migrarRegistro(salvo) {
         release: salvo.release ?? null,
         sprint: salvo.sprint ?? null,
         impeditivo: salvo.impeditivo ?? "",
+        historia: salvo.historia ?? null,
+        gmud: salvo.gmud ?? null,
+        git: salvo.git ?? null,
     };
 }
 function carregarRegistros() {
@@ -681,6 +684,44 @@ function registroImportavel(valor) {
         typeof r.dataFim === "string" &&
         dataIso.test(r.dataFim));
 }
+// Confere valores de lista e datas de cada entrega: o JSON pode ter sido escrito
+// à mão (ver exemplos/entregas-exemplo.json). Grau, release e sprint nulos
+// continuam aceitos porque existem em registros antigos.
+function errosDoRegistroJson(r, posicao) {
+    const erros = [];
+    const onde = `Entrega ${posicao} (id "${r.id}")`;
+    const lista = (opcoes) => opcoes.join(", ");
+    if (!pertence(TIPOS_ITEM, r.tipo))
+        erros.push(`${onde}: tipo "${r.tipo}" inválido. Use: ${lista(TIPOS_ITEM)}.`);
+    if (!r.assunto.trim())
+        erros.push(`${onde}: assunto vazio.`);
+    if (!r.squad.trim())
+        erros.push(`${onde}: squad vazia.`);
+    if (r.dataFim < r.dataInicio)
+        erros.push(`${onde}: dataFim antes de dataInicio.`);
+    if (r.release != null && !pertence(RELEASES, r.release)) {
+        erros.push(`${onde}: release "${r.release}" inválida. Use: ${lista(RELEASES)} (como texto).`);
+    }
+    if (r.sprint != null && !pertence(SPRINTS, r.sprint)) {
+        erros.push(`${onde}: sprint "${r.sprint}" inválida. Use: ${lista(SPRINTS)} (como texto).`);
+    }
+    if (!r.siglas.every((sigla) => typeof sigla === "string"))
+        erros.push(`${onde}: siglas devem ser textos.`);
+    if (r.okrs !== undefined && !Array.isArray(r.okrs))
+        erros.push(`${onde}: okrs deve ser uma lista.`);
+    for (const impacto of Array.isArray(r.okrs) ? r.okrs : []) {
+        if (typeof impacto !== "object" || impacto === null) {
+            erros.push(`${onde}: cada item de okrs deve ser { "okr", "grau", "motivo" }.`);
+            continue;
+        }
+        if (!pertence(OKRS, impacto.okr))
+            erros.push(`${onde}: OKR "${impacto.okr}" inválido. Use: ${lista(OKRS)}.`);
+        if (impacto.grau !== null && !pertence(GRAUS_IMPACTO, impacto.grau)) {
+            erros.push(`${onde}: grau "${impacto.grau}" inválido. Use: ${lista(GRAUS_IMPACTO)}.`);
+        }
+    }
+    return erros;
+}
 async function importarJson() {
     const arquivo = campoImportar.files?.[0];
     if (!arquivo)
@@ -694,8 +735,30 @@ async function importarJson() {
     }
     // Limpa o campo para permitir escolher o mesmo arquivo de novo.
     campoImportar.value = "";
-    if (!Array.isArray(dados) || !dados.every(registroImportavel)) {
-        alert('Arquivo inválido: use um JSON gerado pelo botão "Exportar JSON".');
+    if (!Array.isArray(dados)) {
+        alert('Arquivo inválido: o JSON precisa ser uma lista [ ... ] de entregas (ver exemplos/entregas-exemplo.json).');
+        return;
+    }
+    // Como no CSV, é tudo ou nada: com qualquer entrega inválida, nada é importado.
+    const erros = [];
+    const ids = new Set();
+    for (const [indice, item] of dados.entries()) {
+        const posicao = indice + 1;
+        if (!registroImportavel(item)) {
+            erros.push(`Entrega ${posicao}: faltam campos obrigatórios ou o formato está errado ` +
+                "(id, tipo, assunto, descricao, squad, siglas, dataInicio e dataFim em aaaa-mm-dd).");
+            continue;
+        }
+        if (ids.has(item.id))
+            erros.push(`Entrega ${posicao}: id "${item.id}" repetido no arquivo.`);
+        ids.add(item.id);
+        erros.push(...errosDoRegistroJson(item, posicao));
+    }
+    if (erros.length > 0) {
+        const exibidos = erros.slice(0, MAXIMO_ERROS_EXIBIDOS);
+        if (erros.length > exibidos.length)
+            exibidos.push(`... e mais ${erros.length - exibidos.length} erro(s).`);
+        alert(`JSON inválido, nada foi importado:\n\n${exibidos.join("\n")}`);
         return;
     }
     aplicarImportacao(dados.map(migrarRegistro));
