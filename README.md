@@ -331,7 +331,7 @@ Por que a página é **um arquivo só**: o link pré-assinado vale para um únic
 
 - **Cadastro:** aba Edição → cartão **OKRs e KRs**, organizado em **objetivo** (ex.: Cliente) → **OKRs** (nome + código) → **KRs** (KR1, KR2…). O código do OKR (`A`, `B`…) é preenchido sozinho e é o que vai no CSV e nas entregas. Começa vazio: clique em **+ Novo objetivo**.
 - **Na entrega:** os OKRs aparecem agrupados pelo objetivo; cada OKR é um bloco que abre e fecha. Dentro dele, escolha **Não impacta**, **OKR como um todo** ou um **KR**, e depois o grau e o motivo. É preciso ao menos um OKR.
-- **Proteções:** códigos repetidos não são aceitos, e um OKR ou KR usado por alguma entrega não pode ser removido.
+- **Proteções:** códigos repetidos não são aceitos. Se alguma entrega usa um OKR ou KR que saiu do cadastro, o app avisa (quantas entregas por OKR) e pede confirmação; essas entregas mantêm o código e aparecem como "Fora do cadastro" até serem editadas.
 - **Dashboard:** a seção 04 mostra o título de cada OKR e, no detalhe, quantas entregas há em cada KR. A página gerada pelo botão "Gerar página para o S3" leva o cadastro junto.
 - **Backup:** **Exportar/Importar JSON** no próprio cartão.
 

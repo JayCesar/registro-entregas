@@ -308,7 +308,7 @@ function okrsDoCadastro() {
         })),
     })));
 }
-// Códigos obrigatórios e únicos; OKR ou KR usado por alguma entrega não pode sumir.
+// Códigos obrigatórios e únicos, objetivo e nome preenchidos. Impedem salvar.
 function errosDosOkrs(objetivos) {
     const erros = [];
     const codigos = objetivos.map((o) => o.codigo.toLowerCase());
@@ -330,22 +330,34 @@ function errosDosOkrs(objetivos) {
                 erros.push(`${onde}: o KR "${kr.codigo}" está repetido.`);
         }
     }
+    return [...new Set(erros)];
+}
+// OKRs/KRs usados por entregas que não estão no cadastro novo, com quantas entregas
+// cada um ("OKR A: 5 entregas"). Não impede salvar: as entregas mantêm o código e
+// aparecem como "Fora do cadastro" até serem editadas.
+function avisosDosOkrs(objetivos) {
+    const contagem = new Map();
     for (const registro of registros) {
         for (const { okr, kr } of registro.okrs) {
-            const objetivo = objetivos.find((o) => o.codigo === okr);
-            if (!objetivo)
-                erros.push(`O OKR ${okr} está na entrega "${registro.assunto}": não dá para remover.`);
-            else if (kr && !objetivo.krs.some((k) => k.codigo === kr)) {
-                erros.push(`O ${kr} do OKR ${okr} está na entrega "${registro.assunto}": não dá para remover.`);
-            }
+            const cadastrado = objetivos.find((o) => o.codigo === okr);
+            const chave = !cadastrado ? `OKR ${okr}` : kr && !cadastrado.krs.some((k) => k.codigo === kr) ? `${kr} do OKR ${okr}` : "";
+            if (chave)
+                contagem.set(chave, (contagem.get(chave) ?? 0) + 1);
         }
     }
-    return [...new Set(erros)];
+    return [...contagem].map(([chave, total]) => `• ${chave}: ${total} ${total === 1 ? "entrega" : "entregas"}`);
 }
 function salvarOkrsCadastrados(objetivos) {
     const erros = errosDosOkrs(objetivos);
     if (erros.length > 0) {
         alert(`OKRs não salvos:\n\n${erros.slice(0, MAXIMO_ERROS_EXIBIDOS).join("\n")}`);
+        return false;
+    }
+    const avisos = avisosDosOkrs(objetivos);
+    if (avisos.length > 0 &&
+        !confirm(`Estas entregas usam OKRs/KRs que não estão no cadastro:\n\n${avisos.slice(0, MAXIMO_ERROS_EXIBIDOS).join("\n")}\n\n` +
+            "Elas continuam com o código antigo e aparecem como “Fora do cadastro” até você editá-las " +
+            "(ou cadastre um OKR com o mesmo código). Salvar mesmo assim?")) {
         return false;
     }
     localStorage.setItem(CHAVE_STORAGE_OKRS, JSON.stringify(objetivos));
