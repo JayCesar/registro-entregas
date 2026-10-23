@@ -1203,21 +1203,6 @@ main {
   border-radius: 22px;
 }
 
-.trilho-marca {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 14px;
-  color: var(--sobre-destaque);
-  background: var(--destaque);
-  border-radius: 50%;
-}
-
-.trilho-marca .icone {
-  stroke-width: 2.4;
-}
-
 .trilho-nav {
   display: flex;
   flex-direction: column;
@@ -1319,6 +1304,29 @@ button.trilho-botao.ativa {
 body[data-aba="edicao"] .trilho-nav a.ativa {
   color: var(--texto-suave);
   background: transparent;
+}
+
+/* Visão geral: botão de destaque no topo do trilho, sempre na cor de destaque. */
+.trilho-nav a.trilho-inicio,
+body[data-aba="edicao"] .trilho-nav a.trilho-inicio {
+  margin-bottom: 14px;
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  border-radius: 50%;
+}
+
+.trilho-nav a.trilho-inicio:hover {
+  color: var(--sobre-destaque);
+  background: var(--destaque);
+  filter: brightness(1.08);
+}
+
+.trilho-nav a.trilho-inicio.ativa {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destaque) 35%, transparent);
+}
+
+.trilho-inicio .icone {
+  stroke-width: 2.4;
 }
 
 /* Rótulo flutuante ao passar o mouse ou focar pelo teclado. */
@@ -2001,9 +2009,12 @@ button.hero-explorar .icone {
     padding: 8px;
   }
 
-  .trilho-marca,
   .trilho-rotulo {
     display: none;
+  }
+
+  .trilho-nav a.trilho-inicio {
+    margin-bottom: 0;
   }
 
   .trilho-nav {
