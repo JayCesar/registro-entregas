@@ -571,8 +571,8 @@ function criarEscolha(tipo: "radio" | "checkbox", nome: string, valor: string, r
   entrada.name = nome;
   entrada.value = valor;
   entrada.checked = marcada;
-  // defaultChecked: o reset() do formulário volta para esta marcação.
-  entrada.defaultChecked = marcada;
+  // Só `checked`, nunca defaultChecked: o reset() do formulário (Limpar, depois de
+  // salvar) desmarca tudo, inclusive opções recém-cadastradas, que nascem marcadas.
   const texto = document.createElement("span");
   texto.append(rotulo);
   escolha.append(entrada, texto);
@@ -912,6 +912,13 @@ function aoEnviar(evento: SubmitEvent): void {
   mostrarConfirmacao(salvo, editando);
 }
 
+// Formulário zerado, no topo, com o cursor no primeiro campo.
+function iniciarNovoRegistro(): void {
+  limparFormulario();
+  formulario.scrollIntoView({ behavior: "smooth", block: "start" });
+  campoTipo.focus({ preventScroll: true });
+}
+
 // ---------- Confirmação depois de salvar ----------
 
 const modalConfirmacao = el<HTMLDialogElement>("modal-confirmacao");
@@ -957,6 +964,10 @@ function mostrarConfirmacao(registro: Registro, editado: boolean): void {
   const ok = criarBotao("OK", "", () => modalConfirmacao.close());
   acoes.append(
     ok,
+    criarBotao("+ Adicionar outro registro", "secundario", () => {
+      modalConfirmacao.close();
+      iniciarNovoRegistro();
+    }),
     criarBotao("Ver nos registros", "secundario", () => {
       modalConfirmacao.close();
       corpoTabela.closest("section")?.scrollIntoView({ behavior: "smooth" });
